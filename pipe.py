@@ -1,44 +1,62 @@
 import numpy as np
-import matplotlib.pyplot as plt
 
-def calculate_pipe_points(pipe_lengh, manifold_radius, pipe_diameter, point_density):
-    # Berechnungen 
-    outer_inlet_points_x = np.linspace(0, -pipe_lengh, int(pipe_lengh * point_density))
-    outer_inlet_points_y = np.zeros_like(outer_inlet_points_x)
+def calculate_pipe_points(pipe_1_length, pipe_2_length, manifold_radius, pipe_diameter, point_density, wall_layers, inlet_density):
+    # Berechnungen der Schichten
+    def calculate_layer(offset):
+        # Äßere Schicht
+        outer_manifold_radius = manifold_radius + pipe_diameter/2
 
-    outer_outlet_points_y = np.linspace(manifold_radius, manifold_radius + pipe_lengh, int(pipe_lengh * point_density))
-    outer_outlet_points_x = np.ones_like(outer_outlet_points_y) * (-manifold_radius -pipe_lengh)
+        outer_straight_pipe_1_x = np.linspace(0, -pipe_1_length, int(pipe_1_length * point_density)) 
+        outer_straight_pipe_1_y = np.zeros_like(outer_straight_pipe_1_x) - offset
 
-    angle = np.linspace(3/2*np.pi, np.pi, int(np.pi * manifold_radius * point_density))
-    outer_manifold_points_x = -pipe_lengh + manifold_radius * np.cos(angle)
-    outer_manifold_points_y = manifold_radius + manifold_radius * np.sin(angle)
+        outer_straight_pipe_2_y = np.linspace(outer_manifold_radius, outer_manifold_radius + pipe_2_length, int(pipe_2_length * point_density))
+        outer_straight_pipe_2_x = np.ones_like(outer_straight_pipe_2_y) * (-outer_manifold_radius - pipe_1_length - offset)
 
+        angle = np.linspace(3/2*np.pi, np.pi, int(np.pi * (outer_manifold_radius + offset) * point_density /2))
+        outer_manifold_x = -pipe_1_length + ((outer_manifold_radius + offset) * np.cos(angle)) 
+        outer_manifold_y = outer_manifold_radius + ((outer_manifold_radius + offset) * np.sin(angle))
 
-    inner_inlet_points_x = np.linspace(-pipe_lengh, 0, int(pipe_lengh * point_density))
-    inner_inlet_points_y = np.linspace(pipe_diameter, pipe_diameter, int(pipe_lengh * point_density))
+        # Innere Schicht
+        inner_manifold_radius = manifold_radius - pipe_diameter/2
 
-    inner_outlet_points_y = np.linspace(manifold_radius, manifold_radius + pipe_lengh, int(pipe_lengh * point_density))
-    inner_outlet_points_x = np.linspace(pipe_diameter - pipe_lengh - manifold_radius, pipe_diameter - pipe_lengh - manifold_radius, int(pipe_lengh * point_density))
+        inner_straight_pipe_1_x = np.linspace(-pipe_1_length, 0, int(pipe_1_length * point_density))
+        inner_straight_pipe_1_y = np.linspace(pipe_diameter + offset, pipe_diameter + offset, int(pipe_1_length * point_density))
 
-    inner_manifold_radius = manifold_radius - pipe_diameter
-    angle = np.linspace(3/2*np.pi, np.pi, int(np.pi * inner_manifold_radius * point_density))
-    krümmer_punkte_innen_x = -pipe_lengh + inner_manifold_radius * np.cos(angle)
-    krümmer_punkte_innen_y = manifold_radius + inner_manifold_radius * np.sin(angle)
+        inner_straight_pipe_2_y = np.linspace(outer_manifold_radius, outer_manifold_radius + pipe_2_length, int(pipe_2_length * point_density))
+        inner_straight_pipe_2_x = np.linspace(pipe_diameter - pipe_1_length - outer_manifold_radius + offset, pipe_diameter - pipe_1_length - outer_manifold_radius + offset, int(pipe_2_length * point_density))
 
+        angle = np.linspace(3/2*np.pi, np.pi, int(np.pi * (inner_manifold_radius - offset) * point_density /2))
+        inner_manifold_x = -pipe_1_length + (inner_manifold_radius - offset) * np.cos(angle)
+        inner_manifold_y = outer_manifold_radius + (inner_manifold_radius - offset) * np.sin(angle)
 
-    pipe_points_x = np.concatenate([inner_inlet_points_x, outer_inlet_points_x, krümmer_punkte_innen_x, outer_manifold_points_x, inner_outlet_points_x, outer_outlet_points_x])
-    pipe_points_y = np.concatenate([inner_inlet_points_y, outer_inlet_points_y, krümmer_punkte_innen_y, outer_manifold_points_y, inner_outlet_points_y, outer_outlet_points_y])
+        return outer_straight_pipe_1_x, outer_straight_pipe_1_y, outer_manifold_x, outer_manifold_y, outer_straight_pipe_2_x, outer_straight_pipe_2_y, inner_straight_pipe_1_x, inner_straight_pipe_1_y, inner_manifold_x, inner_manifold_y, inner_straight_pipe_2_x, inner_straight_pipe_2_y
 
-    #Ausgabe
-    return pipe_points_x, pipe_points_y
+    # Startpunkte ohne Offset
+    layers_points = []
+    for i in range(wall_layers):
+        offset = i * 1/point_density  # Offset basierend auf der aktuellen Schicht und Punkt Dichte
+        layers_points.append(calculate_layer(offset))
 
-def visualize_pipe_points(pipe_points_x, pipe_points_y):
-    plt.figure(figsize=(10, 6))
-    plt.plot(pipe_points_x, pipe_points_y, 'o', markersize=2)
-    plt.axis('equal')
-    plt.title('Visualisierung des Krümmers mit Punkten')
-    plt.xlabel('X [mm]')
-    plt.ylabel('Y [mm]')
-    plt.grid(True)
-    plt.show()
+    # inlet_points - Vertikale Linie
+    inlet_points_y = np.linspace(0, pipe_diameter, int(pipe_diameter * inlet_density))[1:-1]
+    inlet_points_x = np.zeros_like(inlet_points_y)
 
+    inlet_points = np.vstack([inlet_points_x, inlet_points_y]).T
+
+    # outlet_points - Horizontale Linie
+    outlet_points_x = np.linspace(-pipe_1_length - manifold_radius + pipe_diameter/2, -pipe_1_length - manifold_radius - pipe_diameter/2, int(pipe_diameter * inlet_density))
+    outlet_points_y = np.ones_like(outlet_points_x) * (manifold_radius + pipe_2_length + pipe_diameter/2)  # Y-Koordinate angepasst für die Positionierung
+
+    outlet_points = np.vstack([outlet_points_x, outlet_points_y]).T
+
+    # Kombinieren der Punkte aller Schichten
+    combined_x, combined_y = [], []
+    for layer in layers_points:
+        for lx, ly in zip(layer[::2], layer[1::2]):  # Schrittweite von 2, um x und y Koordinaten zu paaren
+            combined_x.extend(lx)
+            combined_y.extend(ly)
+
+    # Kombinieren der X- und Y-Koordinaten in einem Array
+    pipe_points = np.vstack([combined_x, combined_y]).T
+
+    return pipe_points, inlet_points, outlet_points
