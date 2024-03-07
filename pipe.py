@@ -1,6 +1,6 @@
 import numpy as np
 
-def calculate_pipe_points(pipe_1_length, pipe_2_length, manifold_radius, pipe_diameter, point_density, wall_layers, inlet_density):
+def calculate_pipe_points(pipe_1_length, pipe_2_length, manifold_radius, pipe_diameter, point_density, wall_layers, initial_particle_distance):
     # Berechnungen der Schichten
     def calculate_layer(offset):
         # Äßere Schicht
@@ -38,13 +38,13 @@ def calculate_pipe_points(pipe_1_length, pipe_2_length, manifold_radius, pipe_di
         layers_points.append(calculate_layer(offset))
 
     # inlet_points - Vertikale Linie
-    inlet_points_y = np.linspace(0, pipe_diameter, int(pipe_diameter * inlet_density))[1:-1]
+    inlet_points_y = np.linspace(0, pipe_diameter, int(pipe_diameter * initial_particle_distance))[1:-1]
     inlet_points_x = np.zeros_like(inlet_points_y)
 
     inlet_points = np.vstack([inlet_points_x, inlet_points_y]).T
 
     # outlet_points - Horizontale Linie
-    outlet_points_x = np.linspace(-pipe_1_length - manifold_radius + pipe_diameter/2, -pipe_1_length - manifold_radius - pipe_diameter/2, int(pipe_diameter * inlet_density))
+    outlet_points_x = np.linspace(-pipe_1_length - manifold_radius + pipe_diameter/2, -pipe_1_length - manifold_radius - pipe_diameter/2, int(pipe_diameter * initial_particle_distance))
     outlet_points_y = np.ones_like(outlet_points_x) * (manifold_radius + pipe_2_length + pipe_diameter/2)  # Y-Koordinate angepasst für die Positionierung
 
     outlet_points = np.vstack([outlet_points_x, outlet_points_y]).T
