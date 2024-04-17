@@ -1,47 +1,77 @@
 import numpy as np
 
-def initialize_simulation(inlet_points, initial_velocity, num_time_steps):
-    num_particles = len(inlet_points)
-    Fluid_Properties = np.zeros((5, num_particles, num_time_steps))
-    Fluid_Properties[0:2, :, 0] = np.array(inlet_points).T  # x, y Positionen
-    Fluid_Properties[2:4, :, 0] = np.tile(initial_velocity, (num_particles, 1)).T  # x, y Geschwindigkeiten
-    return Fluid_Properties
+def initialize_simulation(inlet_points, initial_velocity):
+    # Initialize lists for positions and velocities
+    positions_x, positions_y, velocities_x, velocities_y = [], [], [], []
+    for i in range(len(inlet_points)):
+        positions_x.append([inlet_points[i][0]])
+        positions_y.append([inlet_points[i][1]])
+        velocities_x.append([initial_velocity[0]])
+        velocities_y.append([initial_velocity[1]])
+    return positions_x, positions_y, velocities_x, velocities_y
 
-def calculate_time_step(velocities, delta_t_coefficient, initial_particle_distance):
-    v_max = np.max(np.linalg.norm(velocities, axis=0))
+def calculate_time_step(velocities_x, velocities_y, delta_t_coefficient, initial_particle_distance):
+    velocities = np.sqrt(np.square(velocities_x) + np.square(velocities_y))
+    v_max = np.max(velocities)
     delta_t = delta_t_coefficient * initial_particle_distance / v_max
     return delta_t
 
-def add_new_particles(Fluid_Properties, inlet_points, initial_velocity, t, num_time_steps):
-    num_existing_particles = Fluid_Properties.shape[1]
-    num_new_particles = len(inlet_points)
-    new_particles = np.zeros((5, num_new_particles, num_time_steps))
-    new_particles[0:2, :, t] = np.array(inlet_points).T  # x, y Positionen
-    new_particles[2:4, :, t] = np.tile(initial_velocity, (num_new_particles, 1)).T  # x, y Geschwindigkeiten
-    # Erweitern des Fluid_Properties-Arrays um neue Partikel
-    Fluid_Properties = np.concatenate((Fluid_Properties, new_particles), axis=1)
-    return Fluid_Properties
+def add_new_particles(positions_x, positions_y, velocities_x, velocities_y, inlet_points, initial_velocity, t):
+    # Extend existing lists with new particles
+    for i in range(len(inlet_points)):
+        positions_x.append([inlet_points[i][0]] * (t + 1))
+        positions_y.append([inlet_points[i][1]] * (t + 1))
+        velocities_x.append([initial_velocity[0]] * (t + 1))
+        velocities_y.append([initial_velocity[1]] * (t + 1))
 
-def update_velocity_due_to_gravity(Fluid_Properties, gravity, delta_t, time_step):
-    Fluid_Properties[2:4, :, time_step] = Fluid_Properties[2:4, :, time_step - 1] + np.array(gravity)[:, None] * delta_t
-    return Fluid_Properties
+def calculate_particle_add_interval(initial_velocity, initial_particle_distance):
+    initial_velocity_magnitude = np.linalg.norm(initial_velocity)
+    return initial_particle_distance / initial_velocity_magnitude
 
-def update_positions(Fluid_Properties, delta_t, time_step):
-    Fluid_Properties[0:2, :, time_step] = Fluid_Properties[0:2, :, time_step - 1] + Fluid_Properties[2:4, :, time_step] * delta_t
-    return Fluid_Properties
+def update_velocity_due_to_gravity(velocities_x, velocities_y, gravity, delta_t, t):
+    # Update velocity lists for gravity effect
+    for i in range(len(velocities_x)):
+        velocities_x[i].append(velocities_x[i][t] + gravity[0] * delta_t)
+        velocities_y[i].append(velocities_y[i][t] + gravity[1] * delta_t)
+
+def update_positions(positions_x, positions_y, velocities_x, velocities_y, delta_t, t):
+    # Update position lists based on new velocities
+    for i in range(len(positions_x)):
+        positions_x[i].append(positions_x[i][t] + velocities_x[i][t+1] * delta_t)
+        positions_y[i].append(positions_y[i][t] + velocities_y[i][t+1] * delta_t)
 
 def run_simulation(inlet_points, initial_velocity, gravity, delta_t_coefficient, initial_particle_distance, num_time_steps):
-    Fluid_Properties = initialize_simulation(inlet_points, initial_velocity, num_time_steps)
+    # Initialize simulation
+    positions_x, positions_y, velocities_x, velocities_y = initialize_simulation(inlet_points, initial_velocity)
+    delta_ts = []  # List to store delta_t values for each time step
+    
+    # Calculate the interval for adding new particles
+    particle_add_interval = calculate_particle_add_interval(initial_velocity, initial_particle_distance)
+    time_since_last_addition = 0  # Initialize time counter for particle addition
 
-    for t in range(1, num_time_steps):
-        velocities = Fluid_Properties[2:4, :, t-1]
-        delta_t = calculate_time_step(velocities, delta_t_coefficient, initial_particle_distance)
+    for t in range(num_time_steps - 1):
+        print(f"Running iteration {t+2}/{num_time_steps}")  # Outputs the current iteration number
+        # Calculate time step based on velocities
+        delta_t = calculate_time_step([vx[t] for vx in velocities_x], [vy[t] for vy in velocities_y],
+                                      delta_t_coefficient, initial_particle_distance)
+        delta_ts.append(delta_t)  # Collect delta_t
+        time_since_last_addition += delta_t  # Update time since last addition
+
+        # Check if it's time to add new particles
+        if time_since_last_addition >= particle_add_interval:
+            add_new_particles(positions_x, positions_y, velocities_x, velocities_y, inlet_points, initial_velocity, t)
+            time_since_last_addition = 0  # Reset the time counter after adding particles
         
-        # Prüfen, ob neue Partikel hinzugefügt werden sollen
-        if t % int(1 / delta_t) == 0:  # Zeitintervall für das Hinzufügen neuer Partikel
-            Fluid_Properties = add_new_particles(Fluid_Properties, inlet_points, initial_velocity, t, num_time_steps)
+        # Update velocities due to gravity
+        update_velocity_due_to_gravity(velocities_x, velocities_y, gravity, delta_t, t)
+        
+        # Update positions
+        update_positions(positions_x, positions_y, velocities_x, velocities_y, delta_t, t)
+    
+    # Convert lists to numpy arrays for output
+    print("Build Fluid_Points array")
+    Fluid_Points = np.array([positions_x, positions_y, velocities_x, velocities_y])
+    print("done...")
+    return Fluid_Points, delta_ts
 
-        Fluid_Properties = update_velocity_due_to_gravity(Fluid_Properties, gravity, delta_t, t)
-        Fluid_Properties = update_positions(Fluid_Properties, delta_t, t)
 
-    return Fluid_Properties

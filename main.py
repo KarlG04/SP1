@@ -17,28 +17,29 @@ wall_layers = 3 # Anzahl der Wandschichten
 
 # Fluid-Eigenschaften
 rho = 1000  # Dichte des Wassers in kg/m³
-initial_particle_distance = 1 # Abstand der Punkte in m
+initial_particle_distance = 1 # Abstand der Punkte in mm
 mu = 0.001  # Dynamische Viskosität von Wasser bei Raumtemperatur in Pa·s (oder kg/(m·s))
-gravity = [0.0, -900.81]  # Gravitationskraft in m/s² (x-Komponente, y-Komponente)
+gravity = [0.0, -9810.0]  # Gravitationskraft in mm/s² (x-Komponente, y-Komponente)
 
 
 #Anfangsbedingungen
-initial_velocity = [-200.0, 0.0] # Anfangsgeschwindigkeit in m/s
+initial_velocity = [-3000.0, 0.0] # Anfangsgeschwindigkeit in mm/s
 
 # Weitere Simulationsparameter
-num_time_steps = 10000
-delta_t = 0.01  # Zeitschritt in Sekunden
+num_time_steps = 5000
+delta_t = 0.01  # Zeitschritt in s
 delta_t_coefficient = 0.1 # Konstante damit der Zeitschritt nicht zu groß wird (gängig 0.1)
+animation_interval = 1 # Faktor zur animationsgeschwindigkeit
 
 # Krümmerpubkte berechnen 
 pipe_points, inlet_points, outlet_points = pipe.calculate_pipe_points(pipe_1_length, pipe_2_length, manifold_radius, pipe_diameter, point_density, wall_layers, initial_particle_distance)
 
 #visualization.visualize(pipe_points, inlet_points, outlet_points)
+Fluid_Points,delta_ts = solver.run_simulation(inlet_points, initial_velocity, gravity, delta_t_coefficient, initial_particle_distance, num_time_steps)
 
-Fluid_Properties = solver.run_simulation(inlet_points, initial_velocity, gravity, delta_t_coefficient, initial_particle_distance, num_time_steps)
+visualization.visualize_flow(pipe_points, inlet_points, outlet_points, Fluid_Points, delta_ts)
 
-visualization.visualize_flow(pipe_points, inlet_points, outlet_points, Fluid_Properties)
-
+#visualization.visualize_flow_animation(pipe_points, inlet_points, outlet_points, Fluid_Points, delta_ts, animation_interval)
 # Dieser Block stellt sicher, dass main() nur ausgeführt wird, wenn diese Datei direkt ausgeführt wird,
 # und nicht, wenn sie in einer anderen Datei importiert wird.
 
