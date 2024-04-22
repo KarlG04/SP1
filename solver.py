@@ -1,4 +1,5 @@
 import numpy as np
+import time
 
 def initialize_simulation(inlet_points, initial_velocity):
     # Initialize lists for positions and velocities
@@ -41,6 +42,8 @@ def update_positions(positions_x, positions_y, velocities_x, velocities_y, delta
         positions_y[i].append(positions_y[i][t] + velocities_y[i][t+1] * delta_t)
 
 def run_simulation(inlet_points, initial_velocity, gravity, delta_t_coefficient, initial_particle_distance, num_time_steps):
+    start_time = time.perf_counter()  # Startzeit messen
+    
     # Initialize simulation
     positions_x, positions_y, velocities_x, velocities_y = initialize_simulation(inlet_points, initial_velocity)
     delta_ts = []  # List to store delta_t values for each time step
@@ -49,6 +52,7 @@ def run_simulation(inlet_points, initial_velocity, gravity, delta_t_coefficient,
     particle_add_interval = calculate_particle_add_interval(initial_velocity, initial_particle_distance)
     time_since_last_addition = 0  # Initialize time counter for particle addition
 
+    iteration_start_time = time.perf_counter()  # Startzeit für Iterationen messen
     for t in range(num_time_steps - 1):
         print(f"Running iteration {t+2}/{num_time_steps}")  # Outputs the current iteration number
         # Calculate time step based on velocities
@@ -67,11 +71,22 @@ def run_simulation(inlet_points, initial_velocity, gravity, delta_t_coefficient,
         
         # Update positions
         update_positions(positions_x, positions_y, velocities_x, velocities_y, delta_t, t)
-    
+
+    iteration_end_time = time.perf_counter()  # Endzeit für Iterationen messen
+    iteration_time = iteration_end_time - iteration_start_time  # Berechnung der Zeit für Iterationen
+    print(f"Iteration time: {iteration_time:.2f}s")
+    print(" ")
     # Convert lists to numpy arrays for output
     print("Build Fluid_Points array")
+    array_build_start_time = time.perf_counter()  # Startzeit für das Erstellen des Arrays messen
     Fluid_Points = np.array([positions_x, positions_y, velocities_x, velocities_y])
-    print("done...")
+    array_build_end_time = time.perf_counter()  # Endzeit für das Erstellen des Arrays messen
+    array_build_time = array_build_end_time - array_build_start_time  # Berechnung der Zeit für das Erstellen des Arrays
+    print(f"Array build time: {array_build_time:.2f}s")
+    print(" ")
+
+    total_time = iteration_time + array_build_time  # Berechnung der Gesamtzeit
+    print(f"Simulation completed in: {total_time:.2f}s")
+    print(" ")
+
     return Fluid_Points, delta_ts
-
-

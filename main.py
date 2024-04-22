@@ -26,7 +26,7 @@ gravity = [0.0, -9810.0]  # Gravitationskraft in mm/s² (x-Komponente, y-Kompone
 initial_velocity = [-3000.0, 0.0] # Anfangsgeschwindigkeit in mm/s
 
 # Weitere Simulationsparameter
-num_time_steps = 5000
+num_time_steps = 3000
 delta_t = 0.01  # Zeitschritt in s
 delta_t_coefficient = 0.1 # Konstante damit der Zeitschritt nicht zu groß wird (gängig 0.1)
 animation_interval = 1 # Faktor zur animationsgeschwindigkeit
