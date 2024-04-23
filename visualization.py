@@ -61,8 +61,8 @@ def visualize_flow(pipe_points, inlet_points, outlet_points, Fluid_Points, delta
     points, = ax.plot(Fluid_Points[0, :, 0], Fluid_Points[1, :, 0], 'o', markersize=diameter_particle * factor, color='#42a7f5', label='Fluid Particles')
 
     ax.set_aspect('equal')
-    ax.set_xlabel('X [mm]')
-    ax.set_ylabel('Y [mm]')
+    ax.set_xlabel('X [m]')
+    ax.set_ylabel('Y [m]')
     ax.grid(True)
     ax.legend()
 

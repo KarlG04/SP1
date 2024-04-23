@@ -17,7 +17,7 @@ wall_layers = 1 # Anzahl der Wandschichten
 
 # Fluid-Eigenschaften
 rho = 1000  # Dichte des Wassers in kg/m³
-mass_per_particle = 0.001  # Masse eines Partikels in kg
+mass_per_particle = 0.0001  # Masse eines Partikels in kg
 mu = 0.001  # Dynamische Viskosität von Wasser bei Raumtemperatur in Pa·s (oder kg/(m·s))
 
 volume_per_particle = mass_per_particle / rho  # Volumen in m³ (für 1D Tiefe)
