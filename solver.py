@@ -63,6 +63,7 @@ def run_simulation(inlet_points, initial_velocity, gravity, delta_t_coefficient,
             add_new_particles(positions_x, positions_y, velocities_x, velocities_y, inlet_points, initial_velocity, t)
             time_since_last_addition = 0  # Reset the time counter after adding particles
         
+        # First Step (three step algorythm)
         # Update velocities due to gravity
         update_velocity_due_to_gravity(velocities_x, velocities_y, gravity, delta_t, t)
         
@@ -85,5 +86,13 @@ def run_simulation(inlet_points, initial_velocity, gravity, delta_t_coefficient,
 
     total_time = iteration_time + array_build_time  # Berechnung der Gesamtzeit
     print(f"Simulation completed in: {total_time:.2f}s")
+    print(" ")
+
+    number_particle_additions = len(positions_x) / len(inlet_points)
+    print(f"fluid points: {len(inlet_points)} x {number_particle_additions:.0f} = {len(positions_x)}")
+    print(" ")
+
+    diameterµm = spacing * 1e6
+    print(f"particle diameter: {diameterµm:.2f}µm")
 
     return Fluid_Points, delta_ts

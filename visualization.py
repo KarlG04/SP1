@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 from matplotlib.widgets import Slider
 
-def visualize(pipe_points, inlet_points, outlet_points, diameter_particle):
+def visualize_pipe(pipe_points, inlet_points, outlet_points, diameter_particle):
     fig, ax = plt.subplots(figsize=(14, 6), dpi=100)  # Erstellt ein Subplot für besseres Handling des zooms
 
     factor = 2000
@@ -48,9 +48,6 @@ def visualize(pipe_points, inlet_points, outlet_points, diameter_particle):
 
 
 def visualize_flow(pipe_points, inlet_points, outlet_points, Fluid_Points, delta_ts, diameter_particle):
-    diameter = diameter_particle * 1e6
-    print(f"particle diameter: {diameter:.2f}µm")
-
     fig, ax = plt.subplots(figsize=(10, 6), dpi=100)
     plt.subplots_adjust(bottom=0.15)  # Vergrößern des unteren Randes für Slider
 
