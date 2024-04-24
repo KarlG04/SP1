@@ -1,6 +1,27 @@
 import numpy as np
 import time
 
+# Fluid-Eigenschaften
+rho = 1000  # Dichte des Wassers in kg/m³
+mass_per_particle = 0.003  # Masse eines Partikels in kg
+mu = 0.001  # Dynamische Viskosität von Wasser bei Raumtemperatur in Pa·s (oder kg/(m·s))
+delta_t = 0.01  # Zeitschritt in s
+delta_t_coefficient = 0.1 # Konstante damit der Zeitschritt nicht zu groß wird (gängig 0.1)
+
+
+volume_per_particle = mass_per_particle / rho  # Volumen in m³ (für 1D Tiefe)
+area_per_particle = volume_per_particle  # Fläche in m², da 1 m Tiefe angenommen wird
+diameter_particle = 2 * np.sqrt(area_per_particle / np.pi)  # Durchmesser in m
+spacing = diameter_particle  # Initialer Abstand könnte dem Durchmesser entsprechen
+h = 1.5 * spacing # Glättungsradius in m
+
+#Anfangsbedingungen
+initial_velocity = [-3.0, 0.0] # Anfangsgeschwindigkeit in m/s
+gravity = [0.0, -9.81]  # Gravitationskraft in mm/s² (x-Komponente, y-Komponente)
+
+# Weitere Simulationsparameter
+num_time_steps = 2000 # Anzahl an Berechnungsintervallen
+
 def initialize_simulation(inlet_points, initial_velocity):
     # Initialize lists for positions and velocities
     positions_x, positions_y, velocities_x, velocities_y = [], [], [], []
@@ -40,6 +61,75 @@ def update_positions(positions_x, positions_y, velocities_x, velocities_y, delta
     for i in range(len(positions_x)):
         positions_x[i].append(positions_x[i][t] + velocities_x[i][t+1] * delta_t)
         positions_y[i].append(positions_y[i][t] + velocities_y[i][t+1] * delta_t)
+
+
+
+def merge_positions(positions_x, positions_y, boundary_points):
+    # Extrahiere x und y Positionen aus den Boundary-Points
+    boundary_positions_x = [point[0] for point in boundary_points]
+    boundary_positions_y = [point[1] for point in boundary_points]
+    
+    # Füge Boundary-Positionen an den Anfang der Fluid-Positionen hinzu
+    all_positions_x = np.concatenate([boundary_positions_x, positions_x])
+    all_positions_y = np.concatenate([boundary_positions_y, positions_y])
+    
+    return all_positions_x, all_positions_y
+
+def cubic_spline_kernel(all_positions_x, all_positions_y, h):
+    num_particles = len(all_positions_x)
+    w = np.zeros((num_particles, num_particles))  # Initialisiere ein 2D-Array mit Nullen
+    
+    alpha_D = 10 / (7 * np.pi * h**2)
+    
+    for i in range(num_particles):
+        for j in range(num_particles):
+            if i != j:  # Vermeiden der Berechnung für einen Partikel mit sich selbst
+                dx = all_positions_x[j] - all_positions_x[i]
+                dy = all_positions_y[j] - all_positions_y[i]
+                r = np.sqrt(dx**2 + dy**2)
+                s = r / h
+                
+                if s < 1:
+                    w[i, j] = alpha_D * (1 - 1.5 * s**2 + 0.75 * s**3)
+                elif s < 2:
+                    w[i, j] = alpha_D * 0.25 * (2 - s)**3
+                else:
+                    w[i, j] = 0  # Dieses Element bleibt Null und wird nicht verwendet.
+
+    return w
+
+def kernel_gradient(all_positions_x, all_positions_y, h):
+    num_particles = len(all_positions_x)
+    grad_w = np.zeros((num_particles, num_particles, 2))  # Initialisiere ein 3D-Array mit Nullen
+    
+    alpha_D = 10 / (7 * np.pi * h**2)
+
+    for i in range(num_particles):
+        for j in range(num_particles):
+            if i != j:
+                dx = all_positions_x[j] - all_positions_x[i]
+                dy = all_positions_y[j] - all_positions_y[i]
+                r = np.sqrt(dx**2 + dy**2)
+                
+                if r == 0:
+                    continue  # Vermeide Division durch Null
+
+                s = r / h
+                if s < 1:
+                    factor = alpha_D * (-3 * s + 2.25 * s**2) / (r * h)
+                elif s < 2:
+                    factor = alpha_D * -0.75 * (2 - s)**2 / (r * h)
+                else:
+                    continue  # Überspringe das Speichern von Null-Gradienten
+
+                grad_w[i, j] = factor * np.array([dx, dy])
+
+    return grad_w
+
+
+
+
+
 
 def run_simulation(inlet_points, initial_velocity, gravity, delta_t_coefficient, rho, num_time_steps, spacing):
     # Initialize simulation

@@ -57,6 +57,6 @@ def calculate_pipe_points(pipe_1_length, pipe_2_length, manifold_radius, pipe_di
             combined_y.extend(ly)
 
     # Kombinieren der X- und Y-Koordinaten in einem Array
-    pipe_points = np.vstack([combined_x, combined_y]).T
+    boundary_points = np.vstack([combined_x, combined_y]).T
 
-    return pipe_points, inlet_points, outlet_points
+    return boundary_points, inlet_points, outlet_points

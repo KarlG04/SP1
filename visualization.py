@@ -3,12 +3,12 @@ import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 from matplotlib.widgets import Slider
 
-def visualize_pipe(pipe_points, inlet_points, outlet_points, diameter_particle):
+def visualize_pipe(boundary_points, inlet_points, outlet_points, diameter_particle):
     fig, ax = plt.subplots(figsize=(14, 6), dpi=100)  # Erstellt ein Subplot für besseres Handling des zooms
 
     factor = 2000
     # Rohrpunkte
-    ax.plot(pipe_points[:, 0], pipe_points[:, 1], 'o', markersize=diameter_particle * factor, color='#000000', label='Rohrpunkte')
+    ax.plot(boundary_points[:, 0], boundary_points[:, 1], 'o', markersize=diameter_particle * factor, color='#000000', label='Rohrpunkte')
     # Einlasspunkte
     ax.plot(inlet_points[:, 0], inlet_points[:, 1], 'o', markersize=diameter_particle * factor, color='#55ff4a', label='Einlasspunkte')
     # Auslasspunkte
@@ -47,12 +47,12 @@ def visualize_pipe(pipe_points, inlet_points, outlet_points, diameter_particle):
 
 
 
-def visualize_flow(pipe_points, inlet_points, outlet_points, Fluid_Points, delta_ts, diameter_particle):
+def visualize_flow(boundary_points, inlet_points, outlet_points, Fluid_Points, delta_ts, diameter_particle):
     fig, ax = plt.subplots(figsize=(10, 6), dpi=100)
     plt.subplots_adjust(bottom=0.15)  # Vergrößern des unteren Randes für Slider
 
     factor = 2000
-    ax.plot(pipe_points[:, 0], pipe_points[:, 1], 'o', markersize=diameter_particle * factor, color='#000000', label='Pipe Points')
+    ax.plot(boundary_points[:, 0], boundary_points[:, 1], 'o', markersize=diameter_particle * factor, color='#000000', label='Boundary Points')
     ax.plot(inlet_points[:, 0], inlet_points[:, 1], 'o', markersize=diameter_particle * factor, color='#55ff4a', label='Inlet Points')
     ax.plot(outlet_points[:, 0], outlet_points[:, 1], 'o', markersize=diameter_particle * factor, color='#ff4747', label='Outlet Points')
     points, = ax.plot(Fluid_Points[0, :, 0], Fluid_Points[1, :, 0], 'o', markersize=diameter_particle * factor, color='#42a7f5', label='Fluid Particles')
@@ -98,10 +98,10 @@ def visualize_flow(pipe_points, inlet_points, outlet_points, Fluid_Points, delta
 
 
 
-def visualize_flow_animation(pipe_points, inlet_points, outlet_points, Fluid_Points, delta_ts, animation_interval):
+def visualize_flow_animation(boundary_points, inlet_points, outlet_points, Fluid_Points, delta_ts, animation_interval):
     print("visualize flow animation")
     fig, ax = plt.subplots(figsize=(12, 6), dpi=100)
-    ax.plot(pipe_points[:, 0], pipe_points[:, 1], 'o', markersize=2, color='#000000', label='Pipe Points')
+    ax.plot(boundary_points[:, 0], boundary_points[:, 1], 'o', markersize=2, color='#000000', label='Boundary Points')
     ax.plot(inlet_points[:, 0], inlet_points[:, 1], 'o', markersize=2, color='#55ff4a', label='Inlet Points')
     ax.plot(outlet_points[:, 0], outlet_points[:, 1], 'o', markersize=2, color='#ff4747', label='Outlet Points')
 
