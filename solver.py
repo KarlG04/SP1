@@ -32,10 +32,10 @@ def initialize_simulation(inlet_points, initial_velocity):
         velocities_y.append([initial_velocity[1]])
     return positions_x, positions_y, velocities_x, velocities_y
 
-def calculate_time_step(velocities_x, velocities_y, delta_t_coefficient, spacing):
+def calculate_time_step(velocities_x, velocities_y, CFL_Lag, spacing):
     velocities = np.sqrt(np.square(velocities_x) + np.square(velocities_y))
     v_max = np.max(velocities)
-    delta_t = delta_t_coefficient * spacing / v_max
+    delta_t = CFL_Lag * spacing / v_max
     return delta_t
 
 def add_new_particles(positions_x, positions_y, velocities_x, velocities_y, inlet_points, initial_velocity, t):
@@ -131,7 +131,7 @@ def kernel_gradient(all_positions_x, all_positions_y, h):
 
 
 
-def run_simulation(inlet_points, initial_velocity, gravity, delta_t_coefficient, rho, num_time_steps, spacing):
+def run_simulation(inlet_points, initial_velocity, gravity, CFL_Lag, rho, num_time_steps, spacing):
     # Initialize simulation
     positions_x, positions_y, velocities_x, velocities_y = initialize_simulation(inlet_points, initial_velocity)
     delta_ts = []  # List to store delta_t values for each time step
@@ -144,7 +144,7 @@ def run_simulation(inlet_points, initial_velocity, gravity, delta_t_coefficient,
     for t in range(num_time_steps - 1):
         print(f"Running iteration {t+2}/{num_time_steps}")  # Outputs the current iteration number
         # Calculate time step based on velocities
-        delta_t = calculate_time_step([vx[t] for vx in velocities_x], [vy[t] for vy in velocities_y],delta_t_coefficient, spacing)
+        delta_t = calculate_time_step([vx[t] for vx in velocities_x], [vy[t] for vy in velocities_y],CFL_Lag, spacing)
         delta_ts.append(delta_t)  # Collect delta_t
         time_since_last_addition += delta_t  # Update time since last addition
 
