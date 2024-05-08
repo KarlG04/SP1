@@ -21,7 +21,7 @@ mass_per_particle = 0.003  # Masse eines Partikels in kg
 mu = 0.001  # Dynamische Viskosität von Wasser bei Raumtemperatur in Pa·s (oder kg/(m·s))
 delta_t = 0.01  # Zeitschritt in s
 CFL_Lag = 0.1 # Konstante damit der Zeitschritt nicht zu groß wird (gängig 0.1)
-
+beta = 0.1  # Faktor für Diffusionsbedingung
 
 volume_per_particle = mass_per_particle / rho  # Volumen in m³ (für 1D Tiefe)
 area_per_particle = volume_per_particle  # Fläche in m², da 1 m Tiefe angenommen wird

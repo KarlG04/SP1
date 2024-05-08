@@ -1,19 +1,27 @@
 import numpy as np
 import time
 
+# Rohrparameter
+pipe_1_length = 0.2 # Länge des geraden Rohrabschnitt (Einlass) in m
+pipe_2_length = 0.2 # Länge des geraden Rohrabschnitt (Auslass) in m
+manifold_radius = 0.12 # Äußerer Krümmungsradius in m
+pipe_diameter = 0.02 # Durchmesser des Rohres in m
+wall_layers = 1 # Anzahl der Wandschichten
+
 # Fluid-Eigenschaften
 rho = 1000  # Dichte des Wassers in kg/m³
 mass_per_particle = 0.003  # Masse eines Partikels in kg
 mu = 0.001  # Dynamische Viskosität von Wasser bei Raumtemperatur in Pa·s (oder kg/(m·s))
 delta_t = 0.01  # Zeitschritt in s
-delta_t_coefficient = 0.1 # Konstante damit der Zeitschritt nicht zu groß wird (gängig 0.1)
-
+CFL_Lag = 0.1 # Konstante damit der Zeitschritt nicht zu groß wird (gängig 0.1)
+beta = 0.1  # Faktor für Diffusionsbedingung
 
 volume_per_particle = mass_per_particle / rho  # Volumen in m³ (für 1D Tiefe)
 area_per_particle = volume_per_particle  # Fläche in m², da 1 m Tiefe angenommen wird
 diameter_particle = 2 * np.sqrt(area_per_particle / np.pi)  # Durchmesser in m
 spacing = diameter_particle  # Initialer Abstand könnte dem Durchmesser entsprechen
 h = 1.5 * spacing # Glättungsradius in m
+delta_t_diffusion = beta * 10**2 / (mu/rho) # konstanter Zeitschritt nach diffusions Bedingung
 
 #Anfangsbedingungen
 initial_velocity = [-3.0, 0.0] # Anfangsgeschwindigkeit in m/s
@@ -21,6 +29,7 @@ gravity = [0.0, -9.81]  # Gravitationskraft in mm/s² (x-Komponente, y-Komponent
 
 # Weitere Simulationsparameter
 num_time_steps = 2000 # Anzahl an Berechnungsintervallen
+animation_interval = 1 # Faktor zur animationsgeschwindigkeit
 
 def initialize_simulation(inlet_points, initial_velocity):
     # Initialize lists for positions and velocities
@@ -32,11 +41,11 @@ def initialize_simulation(inlet_points, initial_velocity):
         velocities_y.append([initial_velocity[1]])
     return positions_x, positions_y, velocities_x, velocities_y
 
-def calculate_time_step(velocities_x, velocities_y, CFL_Lag, spacing):
+def calculate_time_step(velocities_x, velocities_y, CFL_Lag, spacing, delta_t_diffusion):
     velocities = np.sqrt(np.square(velocities_x) + np.square(velocities_y))
     v_max = np.max(velocities)
-    delta_t = CFL_Lag * spacing / v_max
-    return delta_t
+    delta_t_courant = CFL_Lag * spacing / v_max
+    return min(delta_t_courant, delta_t_diffusion)
 
 def add_new_particles(positions_x, positions_y, velocities_x, velocities_y, inlet_points, initial_velocity, t):
     # Extend existing lists with new particles
@@ -50,13 +59,13 @@ def calculate_particle_add_interval(initial_velocity, spacing):
     initial_velocity_magnitude = np.linalg.norm(initial_velocity)
     return spacing / initial_velocity_magnitude 
 
-def update_velocity_due_to_gravity(velocities_x, velocities_y, gravity, delta_t, t):
+def update_velocity_step_1(velocities_x, velocities_y, gravity, delta_t, t):
     # Update velocity lists for gravity effect
     for i in range(len(velocities_x)):
         velocities_x[i].append(velocities_x[i][t] + gravity[0] * delta_t)
         velocities_y[i].append(velocities_y[i][t] + gravity[1] * delta_t)
 
-def update_positions(positions_x, positions_y, velocities_x, velocities_y, delta_t, t):
+def update_positions_step_1(positions_x, positions_y, velocities_x, velocities_y, delta_t, t):
     # Update position lists based on new velocities
     for i in range(len(positions_x)):
         positions_x[i].append(positions_x[i][t] + velocities_x[i][t+1] * delta_t)
@@ -94,7 +103,7 @@ def cubic_spline_kernel(all_positions_x, all_positions_y, h):
                 elif s < 2:
                     w[i, j] = alpha_D * 0.25 * (2 - s)**3
                 else:
-                    w[i, j] = 0  # Dieses Element bleibt Null und wird nicht verwendet.
+                    continue  # Dieses Element bleibt Null und wird nicht verwendet.
 
     return w
 
@@ -127,10 +136,6 @@ def kernel_gradient(all_positions_x, all_positions_y, h):
     return grad_w
 
 
-
-
-
-
 def run_simulation(inlet_points, initial_velocity, gravity, CFL_Lag, rho, num_time_steps, spacing):
     # Initialize simulation
     positions_x, positions_y, velocities_x, velocities_y = initialize_simulation(inlet_points, initial_velocity)
@@ -144,7 +149,7 @@ def run_simulation(inlet_points, initial_velocity, gravity, CFL_Lag, rho, num_ti
     for t in range(num_time_steps - 1):
         print(f"Running iteration {t+2}/{num_time_steps}")  # Outputs the current iteration number
         # Calculate time step based on velocities
-        delta_t = calculate_time_step([vx[t] for vx in velocities_x], [vy[t] for vy in velocities_y],CFL_Lag, spacing)
+        delta_t = calculate_time_step([vx[t] for vx in velocities_x], [vy[t] for vy in velocities_y],CFL_Lag, spacing, delta_t_diffusion)
         delta_ts.append(delta_t)  # Collect delta_t
         time_since_last_addition += delta_t  # Update time since last addition
 
@@ -155,10 +160,10 @@ def run_simulation(inlet_points, initial_velocity, gravity, CFL_Lag, rho, num_ti
         
         # First Step (three step algorythm)
         # Update velocities due to gravity
-        update_velocity_due_to_gravity(velocities_x, velocities_y, gravity, delta_t, t)
+        update_velocity_step_1(velocities_x, velocities_y, gravity, delta_t, t)
         
         # Update positions
-        update_positions(positions_x, positions_y, velocities_x, velocities_y, delta_t, t)
+        update_positions_step_1(positions_x, positions_y, velocities_x, velocities_y, delta_t, t)
 
     iteration_end_time = time.perf_counter()  # Endzeit für Iterationen messen
     iteration_time = iteration_end_time - iteration_start_time  # Berechnung der Zeit für Iterationen
