@@ -13,7 +13,7 @@ rho = 1000  # Dichte des Wassers in kg/m³
 mass_per_particle = 0.003  # Masse eines Partikels in kg
 mu = 0.001  # Dynamische Viskosität von Wasser bei Raumtemperatur in Pa·s (oder kg/(m·s))
 delta_t = 0.01  # Zeitschritt in s
-CFL_Lag = 0.1 # Konstante damit der Zeitschritt nicht zu groß wird (gängig 0.1)
+cfl = 0.1 # Konstante damit der Zeitschritt nicht zu groß wird (gängig 0.1)
 beta = 0.1  # Faktor für Diffusionsbedingung
 
 volume_per_particle = mass_per_particle / rho  # Volumen in m³ (für 1D Tiefe)
@@ -41,10 +41,10 @@ def initialize_simulation(inlet_points, initial_velocity):
         velocities_y.append([initial_velocity[1]])
     return positions_x, positions_y, velocities_x, velocities_y
 
-def calculate_time_step(velocities_x, velocities_y, CFL_Lag, spacing, delta_t_diffusion):
+def calculate_time_step(velocities_x, velocities_y, cfl, spacing, delta_t_diffusion):
     velocities = np.sqrt(np.square(velocities_x) + np.square(velocities_y))
     v_max = np.max(velocities)
-    delta_t_courant = CFL_Lag * spacing / v_max
+    delta_t_courant = cfl * spacing / v_max
     return min(delta_t_courant, delta_t_diffusion)
 
 def add_new_particles(positions_x, positions_y, velocities_x, velocities_y, inlet_points, initial_velocity, t):
@@ -136,7 +136,7 @@ def kernel_gradient(all_positions_x, all_positions_y, h):
     return grad_w
 
 
-def run_simulation(inlet_points, initial_velocity, gravity, CFL_Lag, rho, num_time_steps, spacing):
+def run_simulation(inlet_points, initial_velocity, gravity, cfl, rho, num_time_steps, spacing):
     # Initialize simulation
     positions_x, positions_y, velocities_x, velocities_y = initialize_simulation(inlet_points, initial_velocity)
     delta_ts = []  # List to store delta_t values for each time step
@@ -149,7 +149,7 @@ def run_simulation(inlet_points, initial_velocity, gravity, CFL_Lag, rho, num_ti
     for t in range(num_time_steps - 1):
         print(f"Running iteration {t+2}/{num_time_steps}")  # Outputs the current iteration number
         # Calculate time step based on velocities
-        delta_t = calculate_time_step([vx[t] for vx in velocities_x], [vy[t] for vy in velocities_y],CFL_Lag, spacing, delta_t_diffusion)
+        delta_t = calculate_time_step([vx[t] for vx in velocities_x], [vy[t] for vy in velocities_y],cfl, spacing, delta_t_diffusion)
         delta_ts.append(delta_t)  # Collect delta_t
         time_since_last_addition += delta_t  # Update time since last addition
 
