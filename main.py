@@ -15,18 +15,19 @@ manifold_radius = 0.12 # Äußerer Krümmungsradius in m
 pipe_diameter = 0.02 # Durchmesser des Rohres in m
 wall_layers = 1 # Anzahl der Wandschichten
 
-# Fluid-Eigenschaften
+# Fluid-Eigenschaften gegeben
 rho = 1000  # Dichte des Wassers in kg/m³
-mass_per_particle = 0.003  # Masse eines Partikels in kg
+diameter_particle = 1 * 1e-3 # Partikeldurchmesser in m
 mu = 0.001  # Dynamische Viskosität von Wasser bei Raumtemperatur in Pa·s (oder kg/(m·s))
 delta_t = 0.01  # Zeitschritt in s
 cfl = 0.1 # Konstante damit der Zeitschritt nicht zu groß wird (gängig 0.1)
 beta = 0.1  # Faktor für Diffusionsbedingung
 
-volume_per_particle = mass_per_particle / rho  # Volumen in m³ (für 1D Tiefe)
-area_per_particle = volume_per_particle  # Fläche in m², da 1 m Tiefe angenommen wird
-diameter_particle = 2 * np.sqrt(area_per_particle / np.pi)  # Durchmesser in m
-spacing = diameter_particle  # Initialer Abstand könnte dem Durchmesser entsprechen
+# Fluid-Eigenschaften berechnet
+spacing = diameter_particle  # Initialer Partikelabstand
+area_per_particle = np.pi * (diameter_particle / 2) ** 2 # Fläche eines Partikels in m²
+volume_per_particle = area_per_particle # Volumen in m³ (für 1D Tiefe)
+mass_per_particle = volume_per_particle * rho # Masse eines Partikels in kg
 h = 1.5 * spacing # Glättungsradius in m
 
 #Anfangsbedingungen

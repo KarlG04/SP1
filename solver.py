@@ -21,7 +21,7 @@ area_per_particle = volume_per_particle  # Fläche in m², da 1 m Tiefe angenomm
 diameter_particle = 2 * np.sqrt(area_per_particle / np.pi)  # Durchmesser in m
 spacing = diameter_particle  # Initialer Abstand könnte dem Durchmesser entsprechen
 h = 1.5 * spacing # Glättungsradius in m
-delta_t_diffusion = beta * 10**2 / (mu/rho) # konstanter Zeitschritt nach diffusions Bedingung
+delta_t_diffusion = beta * spacing**2 / (mu/rho) # konstanter Zeitschritt nach diffusions Bedingung
 
 #Anfangsbedingungen
 initial_velocity = [-3.0, 0.0] # Anfangsgeschwindigkeit in m/s

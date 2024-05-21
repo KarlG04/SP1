@@ -4,15 +4,12 @@ from matplotlib.animation import FuncAnimation
 from matplotlib.widgets import Slider
 
 def visualize_pipe(boundary_points, inlet_points, outlet_points, diameter_particle):
-    fig, ax = plt.subplots(figsize=(14, 6), dpi=100)  # Erstellt ein Subplot für besseres Handling des zooms
+    fig, ax = plt.subplots(figsize=(14, 6), dpi=100)
 
-    factor = 2000
-    # Rohrpunkte
-    ax.plot(boundary_points[:, 0], boundary_points[:, 1], 'o', markersize=diameter_particle * factor, color='#000000', label='Rohrpunkte')
-    # Einlasspunkte
-    ax.plot(inlet_points[:, 0], inlet_points[:, 1], 'o', markersize=diameter_particle * factor, color='#55ff4a', label='Einlasspunkte')
-    # Auslasspunkte
-    ax.plot(outlet_points[:, 0], outlet_points[:, 1], 'o', markersize=diameter_particle * factor, color='#ff4747', label='Auslasspunkte')
+    # Initiales Zeichnen der Punkte
+    boundary_plot, = ax.plot(boundary_points[:, 0], boundary_points[:, 1], 'o', color='#000000', label='Rohrpunkte')
+    inlet_plot, = ax.plot(inlet_points[:, 0], inlet_points[:, 1], 'o', color='#55ff4a', label='Einlasspunkte')
+    outlet_plot, = ax.plot(outlet_points[:, 0], outlet_points[:, 1], 'o', color='#ff4747', label='Auslasspunkte')
 
     ax.axis('equal')
     ax.set_title('Visualisierung des Krümmers mit Punkten')
@@ -21,27 +18,52 @@ def visualize_pipe(boundary_points, inlet_points, outlet_points, diameter_partic
     ax.grid(True)
     ax.legend()
 
-    # Funktion um auf Mausrad-Events zu reagieren
+    def update_marker_size():
+        xlim = ax.get_xlim()
+        ylim = ax.get_ylim()
+        ax_width = ax.get_window_extent().width
+        ax_height = ax.get_window_extent().height
+        x_range = xlim[1] - xlim[0]
+        y_range = ylim[1] - ylim[0]
+
+        # Berechnung des Skalierungsfaktors basierend auf dem kleineren Achsenbereich und der Fenstergröße
+        x_scale = ax_width / x_range
+        y_scale = ax_height / y_range
+        scale_factor = min(x_scale, y_scale)
+
+        # Berechnung der Markergröße in Punkten
+        marker_size = diameter_particle * scale_factor * 0.416
+        boundary_plot.set_markersize(marker_size)
+        inlet_plot.set_markersize(marker_size)
+        outlet_plot.set_markersize(marker_size)
+        plt.draw()
+
     def on_scroll(event):
         xdata, ydata = event.xdata, event.ydata
-        if xdata is None or ydata is None:  # Falls der Mauszeiger außerhalb der Achsen ist
+        if xdata is None or ydata is None:
             return
         base_scale = 1.1
-        if event.button == 'up':  # Zoom-in
+        if event.button == 'up':
             scale_factor = 1 / base_scale
-        elif event.button == 'down':  # Zoom-out
+        elif event.button == 'down':
             scale_factor = base_scale
         else:
             scale_factor = 1
 
-        # Aktualisiere die Achsen-Skalierung
         ax.set_xlim([xdata - (xdata - ax.get_xlim()[0]) * scale_factor,
                      xdata + (ax.get_xlim()[1] - xdata) * scale_factor])
         ax.set_ylim([ydata - (ydata - ax.get_ylim()[0]) * scale_factor,
                      ydata + (ax.get_ylim()[1] - ydata) * scale_factor])
-        plt.draw()  # Aktualisiere das Plot-Fenster
 
-    fig.canvas.mpl_connect('scroll_event', on_scroll)  # Verbinde das scroll_event mit der on_scroll Funktion
+        update_marker_size()
+
+    def on_resize(event):
+        update_marker_size()
+
+    fig.canvas.mpl_connect('scroll_event', on_scroll)
+    fig.canvas.mpl_connect('resize_event', on_resize)
+
+    update_marker_size()
 
     plt.show()
 
@@ -51,11 +73,11 @@ def visualize_flow(boundary_points, inlet_points, outlet_points, Fluid_Points, d
     fig, ax = plt.subplots(figsize=(10, 6), dpi=100)
     plt.subplots_adjust(bottom=0.15)  # Vergrößern des unteren Randes für Slider
 
-    factor = 2000
-    ax.plot(boundary_points[:, 0], boundary_points[:, 1], 'o', markersize=diameter_particle * factor, color='#000000', label='Boundary Points')
-    ax.plot(inlet_points[:, 0], inlet_points[:, 1], 'o', markersize=diameter_particle * factor, color='#55ff4a', label='Inlet Points')
-    ax.plot(outlet_points[:, 0], outlet_points[:, 1], 'o', markersize=diameter_particle * factor, color='#ff4747', label='Outlet Points')
-    points, = ax.plot(Fluid_Points[0, :, 0], Fluid_Points[1, :, 0], 'o', markersize=diameter_particle * factor, color='#42a7f5', label='Fluid Particles')
+    # Initiales Zeichnen der Punkte
+    boundary_plot, = ax.plot(boundary_points[:, 0], boundary_points[:, 1], 'o', color='#000000', label='Boundary Points')
+    inlet_plot, = ax.plot(inlet_points[:, 0], inlet_points[:, 1], 'o', color='#55ff4a', label='Inlet Points')
+    outlet_plot, = ax.plot(outlet_points[:, 0], outlet_points[:, 1], 'o', color='#ff4747', label='Outlet Points')
+    points, = ax.plot(Fluid_Points[0, :, 0], Fluid_Points[1, :, 0], 'o', color='#42a7f5', label='Fluid Particles')
 
     ax.set_aspect('equal')
     ax.set_xlabel('X [m]')
@@ -79,6 +101,27 @@ def visualize_flow(boundary_points, inlet_points, outlet_points, Fluid_Points, d
 
     slider.on_changed(update)
 
+    def update_marker_size():
+        xlim = ax.get_xlim()
+        ylim = ax.get_ylim()
+        ax_width = ax.get_window_extent().width
+        ax_height = ax.get_window_extent().height
+        x_range = xlim[1] - xlim[0]
+        y_range = ylim[1] - ylim[0]
+
+        # Berechnung des Skalierungsfaktors basierend auf dem kleineren Achsenbereich und der Fenstergröße
+        x_scale = ax_width / x_range
+        y_scale = ax_height / y_range
+        scale_factor = min(x_scale, y_scale)
+
+        # Berechnung der Markergröße in Punkten
+        marker_size = diameter_particle * scale_factor * 0.416
+        boundary_plot.set_markersize(marker_size)
+        inlet_plot.set_markersize(marker_size)
+        outlet_plot.set_markersize(marker_size)
+        points.set_markersize(marker_size)
+        plt.draw()
+
     def on_scroll(event):
         # Center zoom around the mouse position
         x_click, y_click = event.xdata, event.ydata
@@ -90,10 +133,16 @@ def visualize_flow(boundary_points, inlet_points, outlet_points, Fluid_Points, d
                      x_click + (ax.get_xlim()[1] - x_click) * scale_factor])
         ax.set_ylim([y_click - (y_click - ax.get_ylim()[0]) * scale_factor,
                      y_click + (ax.get_ylim()[1] - y_click) * scale_factor])
-        fig.canvas.draw_idle()
+
+        update_marker_size()
+
+    def on_resize(event):
+        update_marker_size()
 
     fig.canvas.mpl_connect('scroll_event', on_scroll)
+    fig.canvas.mpl_connect('resize_event', on_resize)
 
+    update_marker_size()
     plt.show()
 
 
