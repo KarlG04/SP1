@@ -6,30 +6,31 @@ pipe_1_length = 0.2 # Länge des geraden Rohrabschnitt (Einlass) in m
 pipe_2_length = 0.2 # Länge des geraden Rohrabschnitt (Auslass) in m
 manifold_radius = 0.12 # Äußerer Krümmungsradius in m
 pipe_diameter = 0.02 # Durchmesser des Rohres in m
-wall_layers = 1 # Anzahl der Wandschichten
+wall_layers = 5 # Anzahl der Wandschichten
 
-# Fluid-Eigenschaften
+# Fluid-Eigenschaften gegeben
 rho = 1000  # Dichte des Wassers in kg/m³
-mass_per_particle = 0.003  # Masse eines Partikels in kg
+diameter_particle = 1 * 1e-3 # Partikeldurchmesser in m
 mu = 0.001  # Dynamische Viskosität von Wasser bei Raumtemperatur in Pa·s (oder kg/(m·s))
 delta_t = 0.01  # Zeitschritt in s
 cfl = 0.1 # Konstante damit der Zeitschritt nicht zu groß wird (gängig 0.1)
 beta = 0.1  # Faktor für Diffusionsbedingung
 
-volume_per_particle = mass_per_particle / rho  # Volumen in m³ (für 1D Tiefe)
-area_per_particle = volume_per_particle  # Fläche in m², da 1 m Tiefe angenommen wird
-diameter_particle = 2 * np.sqrt(area_per_particle / np.pi)  # Durchmesser in m
-spacing = diameter_particle  # Initialer Abstand könnte dem Durchmesser entsprechen
+# Fluid-Eigenschaften berechnet
+spacing = diameter_particle  # Initialer Partikelabstand
+area_per_particle = np.pi * (diameter_particle / 2) ** 2 # Fläche eines Partikels in m²
+volume_per_particle = area_per_particle # Volumen in m³ (für 1D Tiefe)
+mass_per_particle = volume_per_particle * rho # Masse eines Partikels in kg
 h = 1.5 * spacing # Glättungsradius in m
-delta_t_diffusion = beta * spacing**2 / (mu/rho) # konstanter Zeitschritt nach diffusions Bedingung
 
 #Anfangsbedingungen
-initial_velocity = [-3.0, 0.0] # Anfangsgeschwindigkeit in m/s
+initial_velocity = [-3.0, 0.0] # Anfangsgeschwindigkeit in m/s (x-Komponente, y-Komponente)
 gravity = [0.0, -9.81]  # Gravitationskraft in mm/s² (x-Komponente, y-Komponente)
 
 # Weitere Simulationsparameter
 num_time_steps = 2000 # Anzahl an Berechnungsintervallen
 animation_interval = 1 # Faktor zur animationsgeschwindigkeit
+delta_t_diffusion = (beta * rho * spacing**2)/mu
 
 def initialize_simulation(inlet_points, initial_velocity):
     # Initialize lists for positions and velocities
@@ -84,10 +85,10 @@ def merge_positions(positions_x, positions_y, boundary_points):
     
     return all_positions_x, all_positions_y
 
-def cubic_spline_kernel(all_positions_x, all_positions_y, h):
+def kernel(all_positions_x, all_positions_y, h):
     num_particles = len(all_positions_x)
-    w = np.zeros((num_particles, num_particles))  # Initialisiere ein 2D-Array mit Nullen
-    
+    w = [[] for _ in range(num_particles)]  # Initialisiere eine Liste von Listen für die Gewichte
+
     alpha_D = 10 / (7 * np.pi * h**2)
     
     for i in range(num_particles):
@@ -98,19 +99,24 @@ def cubic_spline_kernel(all_positions_x, all_positions_y, h):
                 r = np.sqrt(dx**2 + dy**2)
                 s = r / h
                 
+                if r == 0 or r > h:
+                    continue  # Vermeide Division durch Null und entfernte Nachbarn
+
                 if s < 1:
-                    w[i, j] = alpha_D * (1 - 1.5 * s**2 + 0.75 * s**3)
+                    weight = alpha_D * (1 - 1.5 * s**2 + 0.75 * s**3)
                 elif s < 2:
-                    w[i, j] = alpha_D * 0.25 * (2 - s)**3
+                    weight = alpha_D * 0.25 * (2 - s)**3
                 else:
                     continue  # Dieses Element bleibt Null und wird nicht verwendet.
 
+                w[i].append((j, weight))
+
     return w
 
-def kernel_gradient(all_positions_x, all_positions_y, h):
+def kernel_gradient_optimized(all_positions_x, all_positions_y, h):
     num_particles = len(all_positions_x)
-    grad_w = np.zeros((num_particles, num_particles, 2))  # Initialisiere ein 3D-Array mit Nullen
-    
+    grad_w = [[] for _ in range(num_particles)]  # Initialisiere eine Liste von Listen für Gradienten
+
     alpha_D = 10 / (7 * np.pi * h**2)
 
     for i in range(num_particles):
@@ -120,8 +126,8 @@ def kernel_gradient(all_positions_x, all_positions_y, h):
                 dy = all_positions_y[j] - all_positions_y[i]
                 r = np.sqrt(dx**2 + dy**2)
                 
-                if r == 0:
-                    continue  # Vermeide Division durch Null
+                if r == 0 or r > h:
+                    continue  # Vermeide Division durch Null und entfernte Nachbarn
 
                 s = r / h
                 if s < 1:
@@ -129,9 +135,9 @@ def kernel_gradient(all_positions_x, all_positions_y, h):
                 elif s < 2:
                     factor = alpha_D * -0.75 * (2 - s)**2 / (r * h)
                 else:
-                    continue  # Überspringe das Speichern von Null-Gradienten
+                    continue  # Dieses Element bleibt Null und wird nicht verwendet.
 
-                grad_w[i, j] = factor * np.array([dx, dy])
+                grad_w[i].append((j, factor * np.array([dx, dy])))
 
     return grad_w
 

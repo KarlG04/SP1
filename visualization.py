@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 from matplotlib.widgets import Slider
 
-def visualize_pipe(boundary_points, inlet_points, outlet_points, diameter_particle):
+def visualize_boundary(boundary_points, inlet_points, outlet_points, diameter_particle):
     fig, ax = plt.subplots(figsize=(14, 6), dpi=100)
 
     # Initiales Zeichnen der Punkte
@@ -12,7 +12,8 @@ def visualize_pipe(boundary_points, inlet_points, outlet_points, diameter_partic
     outlet_plot, = ax.plot(outlet_points[:, 0], outlet_points[:, 1], 'o', color='#ff4747', label='Auslasspunkte')
 
     ax.axis('equal')
-    ax.set_title('Visualisierung des Krümmers mit Punkten')
+    title = f'Visualisierung der festen Strukturen\nPartikeldurchmesser: {diameter_particle*1e6}µm'
+    ax.set_title(title)
     ax.set_xlabel('X [m]')
     ax.set_ylabel('Y [m]')
     ax.grid(True)

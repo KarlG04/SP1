@@ -40,11 +40,11 @@ animation_interval = 1 # Faktor zur animationsgeschwindigkeit
 
 # Krümmerpunkte berechnen 
 boundary_points, inlet_points, outlet_points = boundary.calculate_pipe_points(pipe_1_length, pipe_2_length, manifold_radius, pipe_diameter, spacing, wall_layers)
-visualization.visualize_pipe(boundary_points, inlet_points, outlet_points, diameter_particle)
+visualization.visualize_boundary(boundary_points, inlet_points, outlet_points, diameter_particle)
 
-Fluid_Points, delta_ts = solver.run_simulation(inlet_points, initial_velocity, gravity, cfl, rho, num_time_steps, spacing)
+#Fluid_Points, delta_ts = solver.run_simulation(inlet_points, initial_velocity, gravity, cfl, rho, num_time_steps, spacing)
 
-visualization.visualize_flow(boundary_points, inlet_points, outlet_points, Fluid_Points, delta_ts, diameter_particle)
+#visualization.visualize_flow(boundary_points, inlet_points, outlet_points, Fluid_Points, delta_ts, diameter_particle)
 
 #visualization.visualize_flow_animation(boundary_points, inlet_points, outlet_points, Fluid_Points, delta_ts, animation_interval)
 
