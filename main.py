@@ -1,7 +1,7 @@
 # main.py
 # Importiere benötigte Module
 import numpy as np
-import pipe
+import boundary
 import solver
 import visualization
 
@@ -13,7 +13,7 @@ pipe_1_length = 0.2 # Länge des geraden Rohrabschnitt (Einlass) in m
 pipe_2_length = 0.2 # Länge des geraden Rohrabschnitt (Auslass) in m
 manifold_radius = 0.12 # Äußerer Krümmungsradius in m
 pipe_diameter = 0.02 # Durchmesser des Rohres in m
-wall_layers = 1 # Anzahl der Wandschichten
+wall_layers = 5 # Anzahl der Wandschichten
 
 # Fluid-Eigenschaften gegeben
 rho = 1000  # Dichte des Wassers in kg/m³
@@ -39,8 +39,8 @@ num_time_steps = 2000 # Anzahl an Berechnungsintervallen
 animation_interval = 1 # Faktor zur animationsgeschwindigkeit
 
 # Krümmerpunkte berechnen 
-boundary_points, inlet_points, outlet_points = pipe.calculate_pipe_points(pipe_1_length, pipe_2_length, manifold_radius, pipe_diameter, spacing, wall_layers)
-#visualization.visualize_pipe(boundary_points, inlet_points, outlet_points, diameter_particle)
+boundary_points, inlet_points, outlet_points = boundary.calculate_pipe_points(pipe_1_length, pipe_2_length, manifold_radius, pipe_diameter, spacing, wall_layers)
+visualization.visualize_pipe(boundary_points, inlet_points, outlet_points, diameter_particle)
 
 Fluid_Points, delta_ts = solver.run_simulation(inlet_points, initial_velocity, gravity, cfl, rho, num_time_steps, spacing)
 
