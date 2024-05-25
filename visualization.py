@@ -147,7 +147,6 @@ def visualize_flow(boundary_points, inlet_points, outlet_points, Fluid_Points, d
     plt.show()
 
 
-
 def visualize_flow_animation(boundary_points, inlet_points, outlet_points, Fluid_Points, delta_ts, animation_interval):
     print("visualize flow animation")
     fig, ax = plt.subplots(figsize=(12, 6), dpi=100)
