@@ -6,9 +6,6 @@ from scipy.spatial import KDTree
 rho = 1000  # Dichte des Wassers in kg/m³
 diameter_particle = 5 * 1e-3 # Partikeldurchmesser in m
 mu = 0.001  # Dynamische Viskosität von Wasser bei Raumtemperatur in Pa·s (oder kg/(m·s))
-delta_t = 0.01  # Zeitschritt in s
-cfl = 0.1 # Konstante damit der Zeitschritt nicht zu groß wird (gängig 0.1)
-beta = 0.1  # Faktor für Diffusionsbedingung
 
 # Fluid-Eigenschaften berechnet
 spacing = diameter_particle  # Initialer Partikelabstand
@@ -17,14 +14,18 @@ volume_per_particle = area_per_particle # Volumen in m³ (für 1D Tiefe)
 mass_per_particle = volume_per_particle * rho # Masse eines Partikels in kg
 h = 1.5 * spacing # Glättungsradius in m
 
+# Weitere Simulationsparameter
+num_time_steps = 100 # Anzahl an Berechnungsintervallen
+delta_t = 0.01  # Zeitschritt in s
+eta = 0.1 * h # Reulierungsparameter für den Dreischrittalgorythmus
+cfl = 0.1 # Konstante damit der Zeitschritt nicht zu groß wird (gängig 0.1)
+beta = 0.1  # Faktor für Diffusionsbedingung
+delta_t_diffusion = (beta * rho * spacing**2)/mu
+animation_interval = 1 # Faktor zur animationsgeschwindigkeit
+
 #Anfangsbedingungen
 initial_velocity = [-3.0, 0.0] # Anfangsgeschwindigkeit in m/s
 gravity = [0.0, -9.81]  # Gravitationskraft in mm/s² (x-Komponente, y-Komponente)
-
-# Weitere Simulationsparameter
-num_time_steps = 500 # Anzahl an Berechnungsintervallen
-animation_interval = 1 # Faktor zur animationsgeschwindigkeit
-delta_t_diffusion = (beta * rho * spacing**2)/mu
 
 def initialize_simulation(inlet_points, initial_velocity):
     positions_x = []
@@ -55,16 +56,15 @@ def calculate_particle_add_interval(initial_velocity, spacing):
     initial_velocity_magnitude = np.linalg.norm(initial_velocity)
     return spacing / initial_velocity_magnitude
 
-def update_velocity_step_1(velocities_x, velocities_y, gravity, delta_t):
-    velocities_x = [vx + gravity[0] * delta_t for vx in velocities_x]
-    velocities_y = [vy + gravity[1] * delta_t for vy in velocities_y]
-    return velocities_x, velocities_y
+def update_velocity_step_1(all_velocities_x, all_velocities_y, gravity, delta_t):
+    all_velocities_x = [vx + gravity[0] * delta_t for vx in all_velocities_x]
+    all_velocities_y = [vy + gravity[1] * delta_t for vy in all_velocities_y]
+    return all_velocities_x, all_velocities_y
 
-def update_positions_step_1(positions_x, positions_y, velocities_x, velocities_y, delta_t):
-    positions_x = [px + vx * delta_t for px, vx in zip(positions_x, velocities_x)]
-    positions_y = [py + vy * delta_t for py, vy in zip(positions_y, velocities_y)]
-    return positions_x, positions_y
-
+def update_positions_step_1(all_positions_x, all_positions_y, all_velocities_x, all_velocities_y, delta_t):
+    all_positions_x = [px + vx * delta_t for px, vx in zip(all_positions_x, all_velocities_x)]
+    all_positions_y = [py + vy * delta_t for py, vy in zip(all_positions_y, all_velocities_y)]
+    return all_positions_x, all_positions_y
 
 def merge_positions(positions_x, positions_y, boundary_points):
     # Extrahiere x und y Positionen aus den Boundary-Points
@@ -217,23 +217,116 @@ def calculate_S(mass_per_particle, tau, rho, grad_w, neighbors):
 
     return S_x, S_y
 
-def update_velocity_step_2(velocities_x, velocities_y, S_x, S_y, delta_t):
-    velocities_x = [vx + S_x[i] * delta_t for i, vx in enumerate(velocities_x)]
-    velocities_y = [vy + S_y[i] * delta_t for i, vy in enumerate(velocities_y)]
+def update_velocity_step_2(all_velocities_x, all_velocities_y, S_x, S_y, delta_t):
+    all_velocities_x = [vx + S_x[i] * delta_t for i, vx in enumerate(all_velocities_x)]
+    all_velocities_y = [vy + S_y[i] * delta_t for i, vy in enumerate(all_velocities_y)]
 
-    return velocities_x, velocities_y
+    return all_velocities_x, all_velocities_y
 
-def update_positions_step_2(positions_x, positions_y, velocities_x, velocities_y, delta_t):
-    positions_x = [px + vx * delta_t for px, vx in zip(positions_x, velocities_x)]  
-    positions_y = [py + vy * delta_t for py, vy in zip(positions_y, velocities_y)]
+def update_positions_step_2(all_positions_x, all_positions_y, all_velocities_x, all_velocities_y, delta_t):
+    all_positions_x = [px + vx * delta_t for px, vx in zip(all_positions_x, all_velocities_x)]  
+    all_positions_y = [py + vy * delta_t for py, vy in zip(all_positions_y, all_velocities_y)]
+
+    return all_positions_x, all_positions_y
+
+
+
+def calculate_temporary_density(rho, mass_per_particle, all_velocities_x, all_velocities_y, grad_w, neighbors):
+    num_particles = len(all_velocities_x)
+    rho_temp = [rho] * num_particles  # Initialisiere die temporäre Dichte mit rho
+
+    for i in range(num_particles):
+        density_sum = 0.0
+        for j in neighbors[i]:
+            if i != j:
+                u_diff = all_velocities_x[i] - all_velocities_x[j]
+                v_diff = all_velocities_y[i] - all_velocities_y[j]
+                
+                grad_w_ij = next((grad for idx, grad in grad_w[i] if idx == j), np.zeros(2))
+                
+                density_sum += mass_per_particle * (u_diff * grad_w_ij[0] + v_diff * grad_w_ij[1])
+
+        rho_temp[i] += density_sum
+
+    return rho_temp
+
+def calculate_pressure(all_positions_x, all_positions_y, rho, rho_temp, delta_t, neighbors, grad_w, pressure, mass_per_particle, eta):
+    num_particles = len(all_positions_x)
+    last_num_particles = len(pressure)
+    new_particles = num_particles - last_num_particles
+    pressure.extend([0.0] * new_particles)  # Erweiterung der Druckliste um die neuen Partikel
+
+    for i in range(num_particles):
+        term1 = (rho - rho_temp[i]) / delta_t**2
+        term2 = 0.0
+        term3 = 0.0
+
+        for j in neighbors[i]:
+            if i != j:
+                Pj = pressure[j]
+                mj = mass_per_particle
+                r_ij = np.array([all_positions_x[i] - all_positions_x[j], all_positions_y[i] - all_positions_y[j]])
+                grad_W_ij = next((grad for idx, grad in grad_w[i] if idx == j), np.zeros(2))
+                
+                term2 += (8 * mj * Pj * np.dot(r_ij, grad_W_ij)) / ((rho_temp[i] + rho_temp[j]) ** 2 * (np.dot(r_ij, r_ij) + eta**2))
+                term3 += (8 * mj * np.dot(r_ij, grad_W_ij)) / ((rho_temp[i] + rho_temp[j]) ** 2 * (np.dot(r_ij, r_ij) + eta**2))
+
+        pressure[i] = (term1 + term2) / term3
+
+    return pressure
+
+def calculate_corrective_velocities(mass_per_particle, pressure, rho_temp, grad_w, delta_t):
+    num_particles = len(rho_temp)
+    corrective_velocities_x = [0.0] * num_particles
+    corrective_velocities_y = [0.0] * num_particles
+
+    for i in range(num_particles):
+        sum_x = 0.0
+        sum_y = 0.0
+        for (j, grad_w_ij) in grad_w[i]:
+            if i != j:
+                Pj = pressure[j]
+                Pi = pressure[i]
+                rho_temp_j = rho_temp[j]
+                rho_temp_i = rho_temp[i]
+
+                correction_term = mass_per_particle * ((Pj / (rho_temp_j ** 2)) + (Pi / (rho_temp_i ** 2)))
+                
+                sum_x += correction_term * grad_w_ij[0]
+                sum_y += correction_term * grad_w_ij[1]
+
+        corrective_velocities_x[i] = -delta_t * sum_x
+        corrective_velocities_y[i] = -delta_t * sum_y
+
+    return corrective_velocities_x, corrective_velocities_y
+
+def separate_positions(all_positions_x, all_positions_y, boundary_points):
+    # Anzahl der Boundary-Points
+    num_boundary_points = len(boundary_points)
+
+    # Entferne die Boundary-Points von den Positionen
+    positions_x = all_positions_x[num_boundary_points:]
+    positions_y = all_positions_y[num_boundary_points:]
 
     return positions_x, positions_y
 
+def separate_velocities(all_velocities_x, all_velocities_y, boundary_points):
+    # Anzahl der Boundary-Points
+    num_boundary_points = len(boundary_points)
+
+    # Entferne die Boundary-Points von den Geschwindigkeiten
+    velocities_x = all_velocities_x[num_boundary_points:]
+    velocities_y = all_velocities_y[num_boundary_points:]
+
+    return velocities_x, velocities_y
 
 
-def run_simulation(inlet_points, initial_velocity, gravity, cfl, rho, num_time_steps, spacing, boundary_points):
+def run_simulation(inlet_points, initial_velocity, gravity, cfl, rho, num_time_steps, spacing, boundary_points, eta):
     # Initialisieren der Simulation
     positions_x, positions_y, velocities_x, velocities_y = initialize_simulation(inlet_points, initial_velocity)
+
+    # Initialisieren des Drucks für jeden Partikel
+    pressure = [0.0] * len(inlet_points)
 
     # Gesuchte Werte für jeden Zeitschritt initialisieren
     delta_t_collected = []  # Liste zum Speichern der delta_t Werte
@@ -242,6 +335,7 @@ def run_simulation(inlet_points, initial_velocity, gravity, cfl, rho, num_time_s
     velocities_x_collected = [] # Liste zum Speichern der X-Geschwindigkeitskomponenten
     velocities_y_collected = [] # Liste zum Speichern der Y-Geschwindigkeitskomponenten
     tau_collected = [] # Liste zum Speichern der tau Werte
+    pressure_collected = [] # Liste zum Speichern der Druck Werte
 
     # Intervall für das Hinzufügen neuer Partikel berechnen
     particle_add_interval = calculate_particle_add_interval(initial_velocity, spacing)
@@ -250,7 +344,8 @@ def run_simulation(inlet_points, initial_velocity, gravity, cfl, rho, num_time_s
     iteration_start_time = time.perf_counter()  # Startzeit für Iterationen messen
 
     for t in range(num_time_steps):
-        print(f"Running iteration {t+1}/{num_time_steps}")  # Ausgabe der aktuellen Iterationsnummer
+        print(f"Running iteration {t+1}/{num_time_steps} | ", end="")  # Ausgabe der aktuellen Iterationsnummer
+        iteration_step_start_time = time.perf_counter() # Startzeit für jeden einzelnen Iterationsschritt
         # Zeitschritt basierend auf den Geschwindigkeiten berechnen
         delta_t = calculate_time_step(velocities_x, velocities_y, cfl, spacing, delta_t_diffusion)
         time_since_last_addition += delta_t  # Zeit seit der letzten Zugabe aktualisieren
@@ -259,26 +354,23 @@ def run_simulation(inlet_points, initial_velocity, gravity, cfl, rho, num_time_s
         if time_since_last_addition >= particle_add_interval:
             add_new_particles(positions_x, positions_y, velocities_x, velocities_y, inlet_points, initial_velocity)
             time_since_last_addition = 0  # Zeitgeber nach dem Hinzufügen von Partikeln zurücksetzen
-
-        # Erster Schritt (Dreischrittalgorithmus)
-        # Aktualisieren der Geschwindigkeiten aufgrund von Gravitation
-        velocities_x, velocities_y = update_velocity_step_1(velocities_x, velocities_y, gravity, delta_t)
-        
-        # Aktualisieren der Positionen aufgrund von Gravitation
-        positions_x, positions_y = update_positions_step_1(positions_x, positions_y, velocities_x, velocities_y, delta_t)
-        
-        # Zweiter Schritt (Dreischrittalgorithmus)
-        # Positionen zusammenführen
+       
+        # Positionen des Fluid und der Boundary zusammenführen
         all_positions_x, all_positions_y = merge_positions(positions_x, positions_y, boundary_points)
         
-        # Geschwindigkeiten zusammenführen
+        # Geschwindigkeiten des Fluid und der Boundary zusammenführen
         all_velocities_x, all_velocities_y = merge_velocities(velocities_x, velocities_y, boundary_points)
+
+        # Schritt 1 (Dreischrittalgorithmus)
+        # Aktualisieren der Geschwindigkeiten aufgrund von Gravitation
+        all_velocities_x, all_velocities_y = update_velocity_step_1(all_velocities_x, all_velocities_y, gravity, delta_t)
         
+        # Aktualisieren der Positionen aufgrund von Gravitation
+        # positions_x, positions_y = update_positions_step_1(positions_x, positions_y, velocities_x, velocities_y, delta_t)
+        
+        # Schritt 2 (Dreischrittalgorithmus)
         # Nachbarn finden
         neighbors = find_neighbors(all_positions_x, all_positions_y, h)
-     
-        # Kernel berechnen
-        #w = kernel(all_positions_x, all_positions_y, h, neighbors)
         
         # Kernel-Gradient berechnen
         grad_w = kernel_gradient(all_positions_x, all_positions_y, h, neighbors)
@@ -290,10 +382,31 @@ def run_simulation(inlet_points, initial_velocity, gravity, cfl, rho, num_time_s
         S_x, S_y = calculate_S(mass_per_particle, tau, rho, grad_w, neighbors)
 
         # Geschwindigkeiten mittels S_x und S_y aktualisieren
-        velocities_x, velocities_y = update_velocity_step_2(velocities_x, velocities_y, S_x, S_y, delta_t)
+        all_velocities_x, all_velocities_y = update_velocity_step_2(all_velocities_x, all_velocities_y, S_x, S_y, delta_t)
 
         # Positionen mittels S_x und S_y aktualisieren
-        positions_x, positions_y = update_positions_step_2(positions_x, positions_y, velocities_x, velocities_y, delta_t)
+        all_positions_x, all_positions_y = update_positions_step_2(all_positions_x, all_positions_y, all_velocities_x, all_velocities_y, delta_t)
+
+        # Schritt 3 (Dreischrittalgorithmus)
+        # temporäre Dichte berechnen
+        # Nachbarn finden
+        neighbors = find_neighbors(all_positions_x, all_positions_y, h)
+        
+        # Kernel-Gradient berechnen
+        grad_w = kernel_gradient(all_positions_x, all_positions_y, h, neighbors)
+
+        # temporären Dichte brechnen
+        rho_temp = calculate_temporary_density(rho, mass_per_particle, all_velocities_x, all_velocities_y, grad_w, neighbors)
+
+        # Druck berechnen
+        pressure = calculate_pressure(all_positions_x, all_positions_y, rho, rho_temp, delta_t, neighbors, grad_w, pressure, mass_per_particle, eta)
+
+        # Berechnung der Korrekturgeschwindigkeiten mittels pessure und rho_temp
+        corrective_velocities_x, corrective_velocities_y = calculate_corrective_velocities(mass_per_particle, pressure, rho_temp, grad_w, delta_t)
+
+        # Positionslisten und Geschwindigkeitslisten nach dem Entfernen der Boundary-Points wiederherstellen
+        positions_x, positions_y = separate_positions(all_positions_x, all_positions_y, boundary_points)
+        velocities_x, velocities_y = separate_velocities(all_velocities_x, all_velocities_y, boundary_points)
 
         # Ergebnisse für den aktuellen Zeitschritt speichern
         delta_t_collected.append(delta_t)  # delta_t sammeln
@@ -302,13 +415,22 @@ def run_simulation(inlet_points, initial_velocity, gravity, cfl, rho, num_time_s
         velocities_x_collected.append(velocities_x.copy()) # x-Geschwindigkeiten sammeln
         velocities_y_collected.append(velocities_y.copy()) # y-geschwindigkeiten sammeln
         tau_collected.append(tau)  # Scherspannungen sammeln
+        pressure_collected.append(pressure) # Drücke sammeln
 
-    #Iteraitionszeit berechnen und ausgeben
+        # Zeit für iterationsschritt berechnen und ausgeben
+        iteration_step_end_time = time.perf_counter()
+        iteration_step_time = iteration_step_end_time - iteration_step_start_time 
+        print(f"{iteration_step_time:.2f}s")
+
+    # Iterationszeit berechnen und ausgeben
     iteration_end_time = time.perf_counter()  # Endzeit für Iterationen messen
     iteration_time = iteration_end_time - iteration_start_time  # Zeit für Iterationen berechnen
-    print(f"Iteration time: {iteration_time:.2f}s")
+    # Zeit in Stunden, Minuten und Sekunden umwandeln
+    iteration_time_hours = int(iteration_time // 3600)
+    iteration_time_minutes = int((iteration_time % 3600) // 60)
+    iteration_time_seconds = iteration_time % 60
+    print(f"Iteration time: {iteration_time_hours}h {iteration_time_minutes}m {iteration_time_seconds:.2f}s")
     print(" ")
-
 
     # Maximale Anzahl der Partikel zu jedem Zeitschritt bestimmen
     max_particles = max(len(px) for px in positions_x_collected)
@@ -326,12 +448,20 @@ def run_simulation(inlet_points, initial_velocity, gravity, cfl, rho, num_time_s
     # Array build time berechnen und ausgeben
     array_build_end_time = time.perf_counter()  # Endzeit für das Erstellen des Arrays messen
     array_build_time = array_build_end_time - iteration_end_time  # Zeit für das Erstellen des Arrays berechnen
-    print(f"Array build time: {array_build_time:.2f}s")
+    # Zeit in Stunden, Minuten und Sekunden umwandeln
+    array_build_time_hours = int(array_build_time // 3600)
+    array_build_time_minutes = int((array_build_time % 3600) // 60)
+    array_build_time_seconds = array_build_time % 60
+    print(f"Array build time: {array_build_time_hours}h {array_build_time_minutes}m {array_build_time_seconds:.2f}s")
     print(" ")
 
     # Gesamtzeit berechnen und ausgeben
     total_time = iteration_time + array_build_time  # Gesamtzeit berechnen
-    print(f"Simulation completed in: {total_time:.2f}s")
+    # Zeit in Stunden, Minuten und Sekunden umwandeln
+    total_time_hours = int(total_time // 3600)
+    total_time_minutes = int((total_time % 3600) // 60)
+    total_time_seconds = total_time % 60
+    print(f"Simulation completed in: {total_time_hours}h {total_time_minutes}m {total_time_seconds:.2f}s")
     print(" ")
 
     # gesamte Partikelzahl berechnen und ausgeben

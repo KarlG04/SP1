@@ -19,9 +19,6 @@ wall_layers = 5 # Anzahl der Wandschichten
 rho = 1000  # Dichte des Wassers in kg/m³
 diameter_particle = 5 * 1e-3 # Partikeldurchmesser in m
 mu = 0.001  # Dynamische Viskosität von Wasser bei Raumtemperatur in Pa·s (oder kg/(m·s))
-delta_t = 0.01  # Zeitschritt in s
-cfl = 0.1 # Konstante damit der Zeitschritt nicht zu groß wird (gängig 0.1)
-beta = 0.1  # Faktor für Diffusionsbedingung
 
 # Fluid-Eigenschaften berechnet
 spacing = diameter_particle  # Initialer Partikelabstand
@@ -30,20 +27,24 @@ volume_per_particle = area_per_particle # Volumen in m³ (für 1D Tiefe)
 mass_per_particle = volume_per_particle * rho # Masse eines Partikels in kg
 h = 1.5 * spacing # Glättungsradius in m
 
+# Weitere Simulationsparameter
+num_time_steps = 100 # Anzahl an Berechnungsintervallen
+delta_t = 0.01  # Zeitschritt in s
+eta = 0.1 * h # Reulierungsparameter für den Dreischrittalgorythmus
+cfl = 0.1 # Konstante damit der Zeitschritt nicht zu groß wird (gängig 0.1)
+beta = 0.1  # Faktor für Diffusionsbedingung
+delta_t_diffusion = (beta * rho * spacing**2)/mu
+animation_interval = 1 # Faktor zur animationsgeschwindigkeit
+
 #Anfangsbedingungen
 initial_velocity = [-3.0, 0.0] # Anfangsgeschwindigkeit in m/s
 gravity = [0.0, -9.81]  # Gravitationskraft in mm/s² (x-Komponente, y-Komponente)
-
-# Weitere Simulationsparameter
-num_time_steps = 500 # Anzahl an Berechnungsintervallen
-animation_interval = 1 # Faktor zur animationsgeschwindigkeit
-delta_t_diffusion = (beta * rho * spacing**2)/mu
 
 # Krümmerpunkte berechnen 
 boundary_points, inlet_points, outlet_points = boundary.calculate_pipe_points(pipe_1_length, pipe_2_length, manifold_radius, pipe_diameter, spacing, wall_layers)
 #visualization.visualize_boundary(boundary_points, inlet_points, outlet_points, diameter_particle)
 
-Fluid_Points, delta_ts = solver.run_simulation(inlet_points, initial_velocity, gravity, cfl, rho, num_time_steps, spacing, boundary_points)
+Fluid_Points, delta_ts = solver.run_simulation(inlet_points, initial_velocity, gravity, cfl, rho, num_time_steps, spacing, boundary_points, eta)
 
 visualization.visualize_flow(boundary_points, inlet_points, outlet_points, Fluid_Points, delta_ts, diameter_particle)
 
