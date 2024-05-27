@@ -35,7 +35,7 @@ initial_velocity = [-3.0, 0.0] # Anfangsgeschwindigkeit in m/s
 gravity = [0.0, -9.81]  # Gravitationskraft in mm/s² (x-Komponente, y-Komponente)
 
 # Weitere Simulationsparameter
-num_time_steps = 200 # Anzahl an Berechnungsintervallen
+num_time_steps = 500 # Anzahl an Berechnungsintervallen
 animation_interval = 1 # Faktor zur animationsgeschwindigkeit
 delta_t_diffusion = (beta * rho * spacing**2)/mu
 
