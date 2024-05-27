@@ -43,7 +43,11 @@ def initialize_simulation(inlet_points, initial_velocity):
 def calculate_time_step(velocities_x, velocities_y, cfl, spacing, delta_t_diffusion):
     velocities = np.sqrt(np.square(velocities_x) + np.square(velocities_y))
     v_max = np.max(velocities)
-    delta_t_courant = cfl * spacing / v_max
+    if v_max != 0:
+        delta_t_courant = cfl * spacing / v_max
+    else:
+        delta_t_courant = delta_t_diffusion
+
     return min(delta_t_courant, delta_t_diffusion)
 
 def add_new_particles(positions_x, positions_y, velocities_x, velocities_y, inlet_points, initial_velocity):
@@ -352,22 +356,21 @@ def run_simulation(inlet_points, initial_velocity, gravity, cfl, rho, num_time_s
     pressure_collected = [] # Liste zum Speichern der Druck Werte
 
     # Intervall für das Hinzufügen neuer Partikel berechnen
-    particle_add_interval = calculate_particle_add_interval(initial_velocity, spacing)
+    #particle_add_interval = calculate_particle_add_interval(initial_velocity, spacing)  
+    #time_since_last_addition = 0  # Initialisieren des Zeitzählers für Partikelzugabe
     
-    time_since_last_addition = 0  # Initialisieren des Zeitzählers für Partikelzugabe
     iteration_start_time = time.perf_counter()  # Startzeit für Iterationen messen
-
     for t in range(num_time_steps):
         print(f"Running iteration {t+1}/{num_time_steps} | ", end="")  # Ausgabe der aktuellen Iterationsnummer
         iteration_step_start_time = time.perf_counter() # Startzeit für jeden einzelnen Iterationsschritt
         # Zeitschritt basierend auf den Geschwindigkeiten berechnen
         delta_t = calculate_time_step(velocities_x, velocities_y, cfl, spacing, delta_t_diffusion)
-        time_since_last_addition += delta_t  # Zeit seit der letzten Zugabe aktualisieren
+        #time_since_last_addition += delta_t  # Zeit seit der letzten Zugabe aktualisieren
 
         # Überprüfen, ob es Zeit ist, neue Partikel hinzuzufügen
-        if time_since_last_addition >= particle_add_interval:
-            add_new_particles(positions_x, positions_y, velocities_x, velocities_y, inlet_points, initial_velocity)
-            time_since_last_addition = 0  # Zeitgeber nach dem Hinzufügen von Partikeln zurücksetzen
+        #if time_since_last_addition >= particle_add_interval:
+            #add_new_particles(positions_x, positions_y, velocities_x, velocities_y, inlet_points, initial_velocity)
+            #time_since_last_addition = 0  # Zeitgeber nach dem Hinzufügen von Partikeln zurücksetzen
 
         # Positionen und Geschwindigkeitendes Fluid und der Boundary zusammenführen
         all_positions_x, all_positions_y = merge_positions(positions_x, positions_y, boundary_points)
