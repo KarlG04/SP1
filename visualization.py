@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
-from matplotlib.widgets import Slider
+from matplotlib.widgets import Slider, Button
 
 def visualize_boundary_outlet(boundary_points, inlet_points, outlet_points, diameter_particle):
     fig, ax = plt.subplots(figsize=(14, 6), dpi=100)
@@ -132,9 +132,15 @@ def visualize_boundary(boundary_points, inlet_points, diameter_particle):
     plt.show()
 
 
+
+
+
+
+
+
 def visualize_flow(boundary_points, inlet_points, Fluid_Points, delta_ts, diameter_particle):
     fig, ax = plt.subplots(figsize=(10, 6), dpi=100)
-    plt.subplots_adjust(bottom=0.15)  # Vergrößern des unteren Randes für Slider
+    plt.subplots_adjust(bottom=0.15)  # Vergrößern des unteren Randes für Slider und Buttons
 
     # Initiales Zeichnen der Punkte
     boundary_plot, = ax.plot(boundary_points[:, 0], boundary_points[:, 1], 'o', color='#000000', label='Boundary Points')
@@ -148,11 +154,11 @@ def visualize_flow(boundary_points, inlet_points, Fluid_Points, delta_ts, diamet
     ax.legend()
 
     # Position und Größe des Sliders anpassen, um die gleiche Breite wie das Hauptdiagramm zu haben
-    slider_ax = fig.add_axes([ax.get_position().x0, 0.05, ax.get_position().width, 0.03], facecolor='lightgoldenrodyellow')
+    slider_ax = fig.add_axes([ax.get_position().x0, 0.08, ax.get_position().width, 0.03], facecolor='lightgoldenrodyellow')
     slider = Slider(slider_ax, 'Time Step', 1, Fluid_Points.shape[2], valinit=1, valfmt='%d')
 
     initial_time = sum(delta_ts[:1])
-    time_text = ax.text(0.5, 1.05, f'Time: {initial_time:.6f} s', transform=ax.transAxes, ha='center')
+    time_text = ax.text(0.5, 1.04, f'Time: {initial_time:.6f} s', transform=ax.transAxes, ha='center')
 
     def update(val):
         time_step = int(slider.val) - 1  # Slider-Wert in Array-Index umwandeln
@@ -200,36 +206,28 @@ def visualize_flow(boundary_points, inlet_points, Fluid_Points, delta_ts, diamet
     def on_resize(event):
         update_marker_size()
 
+    def next_time_step(event):
+        current_val = slider.val
+        if current_val < slider.valmax:
+            slider.set_val(current_val + 1)
+
+    def prev_time_step(event):
+        current_val = slider.val
+        if current_val > slider.valmin:
+            slider.set_val(current_val - 1)
+
+    # Button für vorwärts
+    next_button_ax = fig.add_axes([0.8, 0.02, 0.1, 0.04])
+    next_button = Button(next_button_ax, 'Next', color='#ffffff', hovercolor='#f1f1f1')
+    next_button.on_clicked(next_time_step)
+
+    # Button für rückwärts
+    prev_button_ax = fig.add_axes([0.125, 0.02, 0.1, 0.04])
+    prev_button = Button(prev_button_ax, 'Previous', color='#ffffff', hovercolor='#f1f1f1')
+    prev_button.on_clicked(prev_time_step)
+
     fig.canvas.mpl_connect('scroll_event', on_scroll)
     fig.canvas.mpl_connect('resize_event', on_resize)
 
     update_marker_size()
-    plt.show()
-
-
-def visualize_flow_animation(boundary_points, inlet_points, outlet_points, Fluid_Points, delta_ts, animation_interval):
-    print("visualize flow animation")
-    fig, ax = plt.subplots(figsize=(12, 6), dpi=100)
-    ax.plot(boundary_points[:, 0], boundary_points[:, 1], 'o', markersize=2, color='#000000', label='Boundary Points')
-    ax.plot(inlet_points[:, 0], inlet_points[:, 1], 'o', markersize=2, color='#55ff4a', label='Inlet Points')
-    ax.plot(outlet_points[:, 0], outlet_points[:, 1], 'o', markersize=2, color='#ff4747', label='Outlet Points')
-
-    points, = ax.plot(Fluid_Points[0, :, 0], Fluid_Points[1, :, 0], 'o', markersize=2, color='#42a7f5', label='Fluid Particles')
-    ax.axis('equal')
-    ax.legend()
-    ax.grid(True)
-
-    # Initial time display setup
-    initial_time = sum(delta_ts[:1])  # Calculate initial time for display
-    time_text = ax.text(0.5, 1.05, f'Time: {initial_time:.6f} s', transform=ax.transAxes, ha='center')
-
-    def update(frame):
-        points.set_data(Fluid_Points[0, :, frame], Fluid_Points[1, :, frame])
-        current_time = sum(delta_ts[:frame+1])
-        time_text.set_text(f'Time: {current_time:.6f} s')
-        return points,
-
-    # Calculation of the interval using the speed factor
-    ani = FuncAnimation(fig, update, frames=len(delta_ts), interval=animation_interval, blit=True)
-
     plt.show()

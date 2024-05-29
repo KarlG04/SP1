@@ -16,16 +16,16 @@ manifold_radius = 0.12 # Äußerer Krümmungsradius in m
 pipe_diameter = 0.02 # Durchmesser des Rohres in m
 
 #Boxparameter
-box_length = 0.1 # Länge der Box in m
-box_height = 0.05 # Häche der Box in m
+box_length = 0.05 # Länge der Box in m
+box_height = 0.025 # Häche der Box in m
 
-wall_layers = 5 # Anzahl der Wandschichten
+wall_layers = 1 # Anzahl der Wandschichten
 
 # Fluid-Eigenschaften gegeben
 rho = 1000  # Dichte des Wassers in kg/m³
-diameter_particle = 2 * 1e-3 # Partikeldurchmesser in m
-mu = 0.001  # Dynamische Viskosität von Wasser bei Raumtemperatur in Pa·s (oder kg/(m·s))
-initial_pressure = 0.0 # Initialer Druck (für ersten Iterationsschritt) in N/m²
+diameter_particle = 1 * 1e-3 # Partikeldurchmesser in m
+mu = 1 * 1e-3  # Dynamische Viskosität von Wasser bei Raumtemperatur in Pa·s (oder kg/(m·s))
+initial_pressure = 0.001 # Initialer Druck (für ersten Iterationsschritt) in N/m²
 
 # Fluid-Eigenschaften berechnet
 spacing = diameter_particle  # Initialer Partikelabstand
@@ -35,7 +35,7 @@ mass_per_particle = volume_per_particle * rho # Masse eines Partikels in kg
 h = 1.5 * spacing # Glättungsradius in m
 
 # Weitere Simulationsparameter
-num_time_steps = 100 # Anzahl an Berechnungsintervallen
+num_time_steps = 20 # Anzahl an Berechnungsintervallen
 delta_t = 0.01  # Zeitschritt in s
 eta = 0.1 * h # Reulierungsparameter für den Dreischrittalgorythmus
 cfl = 0.1 # Konstante damit der Zeitschritt nicht zu groß wird (gängig 0.1)
@@ -44,8 +44,8 @@ delta_t_diffusion = (beta * rho * spacing**2)/mu
 animation_interval = 1 # Faktor zur animationsgeschwindigkeit
 
 #Anfangsbedingungen
-initial_velocity = [1.0, 0.0] # Anfangsgeschwindigkeit in m/s
-gravity = [0.0, 9.81]  # Gravitationskraft in m/s² (x-Komponente, y-Komponente)
+initial_velocity = [2.0, 0.0] # Anfangsgeschwindigkeit in m/s
+gravity = [0.0, -9.81]  # Gravitationskraft in m/s² (x-Komponente, y-Komponente)
 
 # Krümmerpunkte berechnen 
 #boundary_points, inlet_points, outlet_points = boundary.calculate_pipe_points(pipe_1_length, pipe_2_length, manifold_radius, pipe_diameter, spacing, wall_layers)
@@ -59,7 +59,6 @@ Fluid_Points, delta_ts = solver.run_simulation(inlet_points, initial_velocity, g
 
 visualization.visualize_flow(boundary_points, inlet_points, Fluid_Points, delta_ts, diameter_particle)
 
-#visualization.visualize_flow_animation(boundary_points, inlet_points, outlet_points, Fluid_Points, delta_ts, animation_interval)
 
 if __name__ == "__main__":
     main()
