@@ -138,14 +138,51 @@ def visualize_boundary(boundary_points, inlet_points, diameter_particle):
 
 
 
-def visualize_flow(boundary_points, inlet_points, Fluid_Points, delta_ts, diameter_particle):
+def visualize_flow(boundary_points, inlet_points, Fluid_Points, delta_ts, diameter_particle, h):
     fig, ax = plt.subplots(figsize=(10, 6), dpi=100)
-    plt.subplots_adjust(bottom=0.15)  # Vergrößern des unteren Randes für Slider und Buttons
+    plt.subplots_adjust(bottom=0.25)  # Vergrößern des unteren Randes für Slider und Buttons
 
     # Initiales Zeichnen der Punkte
     boundary_plot, = ax.plot(boundary_points[:, 0], boundary_points[:, 1], 'o', color='#000000', label='Boundary Points')
     inlet_plot, = ax.plot(inlet_points[:, 0], inlet_points[:, 1], 'o', color='#55ff4a', label='Inlet Points')
     points, = ax.plot(Fluid_Points[0, :, 0], Fluid_Points[1, :, 0], 'o', color='#42a7f5', label='Fluid Particles')
+
+    # Nummern der Punkte anzeigen, beginnend bei 1
+    boundary_labels = [ax.text(x, y, str(i + 1), fontsize=7, color='red', visible=False) for i, (x, y) in enumerate(boundary_points)]
+    fluid_labels = [ax.text(x, y, str(i + 1 + len(boundary_points)), fontsize=7, color='blue', visible=False) for i, (x, y) in enumerate(zip(Fluid_Points[0, :, 0], Fluid_Points[1, :, 0]))]
+
+    # Glättungslänge als Kreise
+    boundary_circles = [plt.Circle((x, y), h, color='lightgray', fill=False, linestyle='-', linewidth=0.5, visible=False) for x, y in boundary_points]
+    fluid_circles = [plt.Circle((x, y), h, color='lightgray', fill=False, linestyle='-', linewidth=0.5, visible=False) for x, y in zip(Fluid_Points[0, :, 0], Fluid_Points[1, :, 0])]
+    smoothing_circles = boundary_circles + fluid_circles
+
+    for circle in smoothing_circles:
+        ax.add_artist(circle)
+
+    labels_visible = False
+    circles_visible = False
+
+    def toggle_labels(event):
+        nonlocal labels_visible
+        labels_visible = not labels_visible
+        for label in boundary_labels + fluid_labels:
+            label.set_visible(labels_visible)
+        fig.canvas.draw_idle()
+
+    def toggle_circles(event):
+        nonlocal circles_visible
+        circles_visible = not circles_visible
+        for circle in smoothing_circles:
+            circle.set_visible(circles_visible)
+        fig.canvas.draw_idle()
+
+    label_button_ax = fig.add_axes([0.45, 0.02, 0.1, 0.04])
+    label_button = Button(label_button_ax, 'Toggle Labels', color='#ffffff', hovercolor='#f1f1f1')
+    label_button.on_clicked(toggle_labels)
+
+    circle_button_ax = fig.add_axes([0.45, 0.07, 0.1, 0.04])
+    circle_button = Button(circle_button_ax, 'Toggle Circles', color='#ffffff', hovercolor='#f1f1f1')
+    circle_button.on_clicked(toggle_circles)
 
     ax.set_aspect('equal')
     ax.set_xlabel('X [m]')
@@ -154,7 +191,7 @@ def visualize_flow(boundary_points, inlet_points, Fluid_Points, delta_ts, diamet
     ax.legend()
 
     # Position und Größe des Sliders anpassen, um die gleiche Breite wie das Hauptdiagramm zu haben
-    slider_ax = fig.add_axes([ax.get_position().x0, 0.08, ax.get_position().width, 0.03], facecolor='lightgoldenrodyellow')
+    slider_ax = fig.add_axes([ax.get_position().x0, 0.13, ax.get_position().width, 0.03], facecolor='lightgoldenrodyellow')
     slider = Slider(slider_ax, 'Time Step', 1, Fluid_Points.shape[2], valinit=1, valfmt='%d')
 
     initial_time = sum(delta_ts[:1])
@@ -163,7 +200,16 @@ def visualize_flow(boundary_points, inlet_points, Fluid_Points, delta_ts, diamet
     def update(val):
         time_step = int(slider.val) - 1  # Slider-Wert in Array-Index umwandeln
         points.set_data(Fluid_Points[0, :, time_step], Fluid_Points[1, :, time_step])
-        current_time = sum(delta_ts[:time_step+1])  # Zeit-Index bleibt gleich, weil delta_ts bei 0 beginnt
+        
+        # Aktualisieren der Fluid Labels
+        for label, (x, y) in zip(fluid_labels, zip(Fluid_Points[0, :, time_step], Fluid_Points[1, :, time_step])):
+            label.set_position((x, y))
+        
+        # Aktualisieren der Fluid Kreise
+        for circle, (x, y) in zip(fluid_circles, zip(Fluid_Points[0, :, time_step], Fluid_Points[1, :, time_step])):
+            circle.center = (x, y)
+        
+        current_time = sum(delta_ts[:time_step + 1])  # Zeit-Index bleibt gleich, weil delta_ts bei 0 beginnt
         time_text.set_text(f'Time: {current_time:.6f} s')
         fig.canvas.draw_idle()
 
