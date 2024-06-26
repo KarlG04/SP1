@@ -1,53 +1,65 @@
+# main.py
+# Importiere benötigte Module
 import numpy as np
-from pysph.base.utils import get_particle_array
-from pysph.solver.application import Application
-from pysph.solver.solver import Solver
-from pysph.sph.scheme import SchemeChooser
-from pysph.sph.wc.basic import WCSPHScheme
-from pysph.tools.geometry import remove_overlap_particles
+import boundary
+import solver
+import visualization
 
-class Dambreak2D(Application):
-    def create_particles(self):
-        dx = 0.02
-        hdx = 1.2
-        rho = 1000.0
-        c0 = 10.0
-        alpha = 0.1
+def main():
+    print("Das Programm startet hier.")
 
-        # Create particles for the water column
-        x, y = np.mgrid[-0.1:0.1:dx, -0.1:0.3:dx]
-        x = x.ravel()
-        y = y.ravel()
-        m = np.ones_like(x) * dx**2 * rho
-        h = np.ones_like(x) * hdx * dx
-        rho = np.ones_like(x) * rho
-        p = np.zeros_like(x)
-        cs = np.ones_like(x) * c0
-        pa = get_particle_array(name='fluid', x=x, y=y, m=m, h=h, rho=rho, p=p, cs=cs)
-        
-        # Create boundary particles
-        xb, yb = np.mgrid[-0.2:0.5:dx, -0.2:0.0:dx]
-        xb = xb.ravel()
-        yb = yb.ravel()
-        mb = np.ones_like(xb) * dx**2 * rho
-        hb = np.ones_like(xb) * hdx * dx
-        rhob = np.ones_like(xb) * rho
-        pb = np.zeros_like(xb)
-        csb = np.ones_like(xb) * c0
-        boundary = get_particle_array(name='boundary', x=xb, y=yb, m=mb, h=hb, rho=rhob, p=pb, cs=csb)
+# Fluid-Eigenschaften gegeben
+initial_density = 1000.0  # Dichte des Wassers in kg/m³
+diameter_particle = 0.02 # Partikeldurchmesser in m
+mu = 1 * 1e-3    # Dynamische Viskosität von Wasser bei Raumtemperatur in Pa·s (oder kg/(m·s))
 
-        return [pa, boundary]
+# Fluid-Eigenschaften berechnet
+spacing = diameter_particle  # Initialer Partikelabstand
+area_per_particle = np.pi * (diameter_particle / 2) ** 2 # Fläche eines Partikels in m²
+volume_per_particle = area_per_particle # Volumen in m³ (für 1D Tiefe)
+mass_per_particle = initial_density * volume_per_particle
+h = 1.5 * spacing # Glättungsradius in m
+nu = mu/initial_density # Kinematische viskosität berechnen
 
-    def create_scheme(self):
-        s = WCSPHScheme(
-            ['fluid'], ['boundary'], dim=2, rho0=1000.0, c0=10.0, h0=0.02*1.2, hdx=1.2, alpha=0.1
-        )
-        return SchemeChooser(default='wcsph', wcsph=s)
+# Weitere Simulationsparameter
+num_time_steps = 600 # Anzahl an Berechnungsintervallen
+eta = 0.01 # Regulierungsparameter für den Dreischrittalgorythmus
 
-    def configure_scheme(self):
-        scheme = self.scheme
-        scheme.configure_solver(dt=1e-4, tf=2.0, adaptive_timestep=True)
+#Anfangsbedingungen
+gravity = (0.0, -9.81)  # Gravitationskraft in m/s² (x-Komponente, y-Komponente)
 
-if __name__ == '__main__':
-    app = Dambreak2D()
-    app.run()
+#Boxparameter
+box_length = 0.4 # Länge der Box in m
+box_height = 0.4 # Höhe der Box in m
+fluid_length = 0.2 # initiale Länge des Fluid-Blocks in m
+fluid_height = 0.2 # initiale Höhe des Fluid-Blocks in m
+
+boundary_spacing = 1*spacing # Abstand der Boundary Partikel
+wall_layers = 1 # Anzahl der Wandschichten
+
+
+# Berechne c_0 basierend auf der größeren Komponente der Gravitation
+max_gravity = max(abs(gravity[0]), abs(gravity[1]))
+c_0 = 10 * (2 * max_gravity * fluid_height) ** 0.5
+n_1 = 12.0
+n_2 = 4.0
+r_0 = spacing
+boundary_factor = 1 * 1e3
+
+
+# Berechne delta_t
+delta_t = 4 * 1e-4
+gamma = 7.0
+
+
+# Boxpunkte berechnen 
+boundary_points, inlet_points, boundary_description = boundary.calculate_box_points(box_length, box_height, fluid_length, fluid_height, spacing, boundary_spacing, wall_layers)
+#visualization.visualize_boundary(boundary_points, inlet_points, diameter_particle)
+
+Fluid_Points, delta_ts = solver.run_simulation(inlet_points, gravity, initial_density, nu, mass_per_particle, num_time_steps, spacing, h, eta, delta_t, box_length, box_height, c_0, gamma, n_1, n_2, r_0, boundary_factor)
+
+visualization.visualize_flow(boundary_points, inlet_points, Fluid_Points, delta_ts, diameter_particle, h)
+
+
+if __name__ == "__main__":
+    main()
