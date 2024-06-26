@@ -62,39 +62,64 @@ def calculate_pipe_points(pipe_1_length, pipe_2_length, manifold_radius, pipe_di
     return boundary_points, inlet_points, outlet_points
 
 
-def calculate_box_points(box_length, box_height, spacing, wall_layers):
-    # Berechnungen der Schichten
+def calculate_box_points(box_length, box_height, fluid_length, fluid_height, spacing, boundary_spacing, wall_layers):
     boundary_points_x, boundary_points_y = [], []
-    for i in range(wall_layers):
-        offset = i * spacing  # Offset basierend auf der aktuellen Schicht und Punkt Dichte
-        
-        bottom_x = np.linspace(-spacing * (wall_layers-1), box_length + spacing * (wall_layers-1), int((box_length + spacing * (wall_layers-1) * 2) / spacing))
-        bottom_y = np.full_like(bottom_x, -offset)
-        boundary_points_x.extend(bottom_x)
-        boundary_points_y.extend(bottom_y)
+    boundary_description = []
 
-        left_wall_x = np.full(int(box_height / spacing), -offset)
-        left_wall_y = np.linspace(spacing, box_height, int(box_height / spacing))
+    for i in range(wall_layers):
+        offset = i * boundary_spacing
+
+        # Bottom boundary points
+        bottom_x = np.linspace(-boundary_spacing * (wall_layers-1), box_length + boundary_spacing * (wall_layers-1), int((box_length + boundary_spacing * (wall_layers-1) * 2) / boundary_spacing))
+        bottom_y = np.full_like(bottom_x, - offset)
+        boundary_points_x.extend(bottom_x[1:-1])
+        boundary_points_y.extend(bottom_y[1:-1])
+        boundary_description.extend(['BB'] * (len(bottom_x) - 2))
+
+        # Top boundary points
+        top_x = np.linspace(-boundary_spacing * (wall_layers-1), box_length + boundary_spacing * (wall_layers-1), int((box_length + boundary_spacing * (wall_layers-1) * 2) / boundary_spacing))
+        top_y = np.full_like(top_x, box_height + offset)
+        boundary_points_x.extend(top_x[1:-1])
+        boundary_points_y.extend(top_y[1:-1])
+        boundary_description.extend(['TT'] * (len(top_x) - 2))
+
+        wall_height = box_height - 2 * boundary_spacing
+        
+        # Left boundary points
+        left_wall_x = np.full(int(wall_height / boundary_spacing), -offset)
+        left_wall_y = np.linspace(boundary_spacing, box_height - boundary_spacing, int(wall_height / boundary_spacing))
         boundary_points_x.extend(left_wall_x)
         boundary_points_y.extend(left_wall_y)
+        boundary_description.extend(['LL'] * len(left_wall_x))
 
-        right_wall_x = np.full(int(box_height / spacing), box_length + offset)
-        right_wall_y = np.linspace(spacing, box_height, int(box_height / spacing))
+        # Right boundary points
+        right_wall_x = np.full(int(wall_height / boundary_spacing), box_length + offset)
+        right_wall_y = np.linspace(boundary_spacing, box_height - boundary_spacing, int(wall_height / boundary_spacing))
         boundary_points_x.extend(right_wall_x)
         boundary_points_y.extend(right_wall_y)
-    
-    # Kombinieren der X- und Y-Koordinaten in einem Array für boundary_points
+        boundary_description.extend(['RR'] * len(right_wall_x))
+
+        # Corners for each layer
+        corners = [
+            (-boundary_spacing * (wall_layers-1), - offset, 'BL'),
+            (box_length + boundary_spacing * (wall_layers-1), - offset, 'BR'),
+            (-boundary_spacing * (wall_layers-1), box_height + offset, 'TL'),
+            (box_length + boundary_spacing * (wall_layers-1), box_height + offset, 'TR')
+        ]
+
+        for x, y, pos in corners:
+            boundary_points_x.append(x)
+            boundary_points_y.append(y)
+            boundary_description.append(pos)
+
     boundary_points = np.vstack([boundary_points_x, boundary_points_y]).T
 
-    # inlet_points
-    inlet_points_layers = 1
-    for i in range(inlet_points_layers):
-        offset = i * spacing  # Offset basierend auf der aktuellen Schicht und Punkt Dichte
-        box_length_2 = box_length / 2
-        inlet_points_x = np.linspace(box_length/4, box_length*3/4, int(box_length_2 / spacing))
-        inlet_points_y = np.full_like(inlet_points_x, box_height*3/4 - offset)
+    inlet_points_x, inlet_points_y = [], []
 
-        # Kombinieren der X- und Y-Koordinaten in einem Array für inlet_points
-        inlet_points = np.vstack([inlet_points_x, inlet_points_y]).T
+    inlet_points_x = np.linspace(boundary_spacing, fluid_length, int(fluid_length / spacing))
+    inlet_points_y = np.linspace(boundary_spacing, fluid_height, int(fluid_height / spacing))
 
-    return boundary_points, inlet_points
+    inlet_points_x, inlet_points_y = np.meshgrid(inlet_points_x, inlet_points_y)
+    inlet_points = np.vstack([inlet_points_x.ravel(), inlet_points_y.ravel()]).T
+
+    return boundary_points, inlet_points, boundary_description
