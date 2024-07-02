@@ -10,7 +10,7 @@ def main():
 
 # Fluid-Eigenschaften gegeben
 initial_density = 1000.0  # Dichte des Wassers in kg/m³
-diameter_particle = 0.02 # Partikeldurchmesser in m
+diameter_particle = 0.015 # Partikeldurchmesser in m
 mu = 1 * 1e-3    # Dynamische Viskosität von Wasser bei Raumtemperatur in Pa·s (oder kg/(m·s))
 
 # Fluid-Eigenschaften berechnet
@@ -22,7 +22,7 @@ h = 1.5 * spacing # Glättungsradius in m
 nu = mu/initial_density # Kinematische viskosität berechnen
 
 # Weitere Simulationsparameter
-num_time_steps = 600 # Anzahl an Berechnungsintervallen
+num_time_steps = 500 # Anzahl an Berechnungsintervallen
 eta = 0.01 # Regulierungsparameter für den Dreischrittalgorythmus
 
 #Anfangsbedingungen
@@ -40,11 +40,11 @@ wall_layers = 1 # Anzahl der Wandschichten
 
 # Berechne c_0 basierend auf der größeren Komponente der Gravitation
 max_gravity = max(abs(gravity[0]), abs(gravity[1]))
-c_0 = 10 * (2 * max_gravity * fluid_height) ** 0.5
+c_0 = 12 #10 * (2 * max_gravity * fluid_height) ** 0.5
 n_1 = 12.0
 n_2 = 4.0
 r_0 = spacing
-boundary_factor = 1 * 1e3
+boundary_factor = 3 * 1e2
 
 
 # Berechne delta_t

@@ -40,7 +40,7 @@ def compute_grad_w(fluid_positions, neighbors, h):
                 grad_w.append((i, j, (grad_W_ij[0], grad_W_ij[1])))
     return grad_w
 
-def calculate_density(current_density, fluid_velocities, neighbors, grad_w, delta_t, mass_per_particle):
+def calculate_density(current_density, fluid_velocities, neighbors, grad_w, delta_t, mass_per_particle, initial_density):
     num_particles = len(fluid_velocities)
     new_density = [0.0 for _ in range(num_particles)]
     for i in range(num_particles):
@@ -49,8 +49,8 @@ def calculate_density(current_density, fluid_velocities, neighbors, grad_w, delt
             grad_W_ij_x, grad_W_ij_y = next((grad for (pi, pj, grad) in grad_w if pi == i and pj == j), (0, 0))
             u_diff_x = fluid_velocities[i][0] - fluid_velocities[j][0]
             u_diff_y = fluid_velocities[i][1] - fluid_velocities[j][1]
-            sum_term += mass_per_particle * (u_diff_x * grad_W_ij_x + u_diff_y * grad_W_ij_y)
-        new_density[i] = current_density[i] + delta_t * sum_term
+            sum_term += mass_per_particle * (u_diff_x * grad_W_ij_x + u_diff_y * grad_W_ij_y) / current_density[j]
+        new_density[i] = current_density[i] + delta_t * 0.5 * (initial_density + sum_term)
     return new_density
 
 def calculate_pressure(current_density, initial_density, gamma, c_0):
@@ -82,18 +82,18 @@ def calculate_pressure_acceleration(fluid_positions, current_density, pressure, 
 def calculate_viscosity_acceleration(fluid_positions, fluid_velocities, neighbors, grad_w, nu, eta, mass_per_particle, current_density):
     num_particles = len(fluid_positions)
     viscosity_acceleration = [(0.0, 0.0) for _ in range(num_particles)]
-    for i in range(num_particles):
-        acc_viscosity_x = 0
-        acc_viscosity_y = 0
-        for j in neighbors[i]:
-            grad_W_ij_x, grad_W_ij_y = next((grad for (pi, pj, grad) in grad_w if pi == i and pj == j), (0, 0))
-            u_diff_x = fluid_velocities[i][0] - fluid_velocities[j][0]
-            u_diff_y = fluid_velocities[i][1] - fluid_velocities[j][1]
-            r_ij = np.array(fluid_positions[i]) - np.array(fluid_positions[j])
-            distance = np.linalg.norm(r_ij)
-            acc_viscosity_x += mass_per_particle * 8 * (nu + nu) * u_diff_x / ((distance**2 + eta**2) * (current_density[i] + current_density[j])) * grad_W_ij_x
-            acc_viscosity_y += mass_per_particle * 8 * (nu + nu) * u_diff_y / ((distance**2 + eta**2) * (current_density[i] + current_density[j])) * grad_W_ij_y
-        viscosity_acceleration[i] = (acc_viscosity_x, acc_viscosity_y)
+    #for i in range(num_particles):
+    #    acc_viscosity_x = 0
+    #    acc_viscosity_y = 0
+    #    for j in neighbors[i]:
+    #        grad_W_ij_x, grad_W_ij_y = next((grad for (pi, pj, grad) in grad_w if pi == i and pj == j), (0, 0))
+    #        u_diff_x = fluid_velocities[i][0] - fluid_velocities[j][0]
+    #        u_diff_y = fluid_velocities[i][1] - fluid_velocities[j][1]
+    #        r_ij = np.array(fluid_positions[i]) - np.array(fluid_positions[j])
+    #        distance = np.linalg.norm(r_ij)
+    #        acc_viscosity_x += mass_per_particle * 8 * (nu + nu) * u_diff_x / ((distance**2 + eta**2) * (current_density[i] + current_density[j])) * grad_W_ij_x
+    #        acc_viscosity_y += mass_per_particle * 8 * (nu + nu) * u_diff_y / ((distance**2 + eta**2) * (current_density[i] + current_density[j])) * grad_W_ij_y
+    #    viscosity_acceleration[i] = (acc_viscosity_x, acc_viscosity_y)
     return viscosity_acceleration
 
 def calculate_boundary_force(fluid_positions, fluid_velocities, box_height, box_length, n_1, n_2, r_0, boundary_factor):
@@ -106,14 +106,14 @@ def calculate_boundary_force(fluid_positions, fluid_velocities, box_height, box_
         vi = np.array(fluid_velocities[i])
         
         # Check boundaries in x direction
-        if xi[0] < 0 + r_0:
+        if xi[0] < 0 + r_0 and vi[0] < 0:
             distance = xi[0]
             term1 = (r_0 / distance) ** n_1
             term2 = (r_0 / distance) ** n_2
             force_magnitude = boundary_factor * (term1 - term2)
             force_x += force_magnitude * abs(vi[0])  # Multiplied by the absolute value of x velocity component
                 
-        if xi[0] > box_length - r_0:
+        if xi[0] > box_length - r_0 and vi[0] > 0:
             distance = box_length - xi[0]
             term1 = (r_0 / distance) ** n_1
             term2 = (r_0 / distance) ** n_2
@@ -121,14 +121,14 @@ def calculate_boundary_force(fluid_positions, fluid_velocities, box_height, box_
             force_x -= force_magnitude * abs(vi[0])  # Multiplied by the absolute value of x velocity component
         
         # Check boundaries in y direction
-        if xi[1] < 0 + r_0:
+        if xi[1] < 0 + r_0 and vi[1] < 0:
             distance = xi[1]
             term1 = (r_0 / distance) ** n_1
             term2 = (r_0 / distance) ** n_2
             force_magnitude = boundary_factor * (term1 - term2)
             force_y += force_magnitude * abs(vi[1])  # Multiplied by the absolute value of y velocity component
                 
-        if xi[1] > box_height - r_0:
+        if xi[1] > box_height - r_0 and vi[1] > 0:
             distance = box_height - xi[1]
             term1 = (r_0 / distance) ** n_1
             term2 = (r_0 / distance) ** n_2
@@ -137,7 +137,7 @@ def calculate_boundary_force(fluid_positions, fluid_velocities, box_height, box_
 
         boundary_force[i] = (force_x, force_y)
         # Print the boundary force for each particle
-        print(f"Particle {i}: Boundary Force = (Fx: {force_x}, Fy: {force_y})")
+        #print(f"Particle {i}: Boundary Force = (Fx: {force_x}, Fy: {force_y})")
         
     return boundary_force
 
@@ -194,7 +194,7 @@ def run_simulation(inlet_points, gravity, initial_density, nu, mass_per_particle
         
         viscosity_acceleration = calculate_viscosity_acceleration(fluid_positions, fluid_velocities, neighbors, grad_w, nu, eta, mass_per_particle, current_density)
 
-        new_density = calculate_density(current_density, fluid_velocities, neighbors, grad_w, delta_t, mass_per_particle)
+        new_density = calculate_density(current_density, fluid_velocities, neighbors, grad_w, delta_t, mass_per_particle, initial_density)
         current_density = new_density
 
         pressure = calculate_pressure(current_density, initial_density, gamma, c_0)
