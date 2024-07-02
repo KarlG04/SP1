@@ -17,7 +17,7 @@ mu = 1 * 1e-3    # Dynamische Viskosität von Wasser bei Raumtemperatur in Pa·s
 spacing = diameter_particle  # Initialer Partikelabstand
 area_per_particle = np.pi * (diameter_particle / 2) ** 2 # Fläche eines Partikels in m²
 volume_per_particle = area_per_particle # Volumen in m³ (für 1D Tiefe)
-mass_per_particle = initial_density * volume_per_particle
+mass_per_particle = 0.1
 h = 1.5 * spacing # Glättungsradius in m
 nu = mu/initial_density # Kinematische viskosität berechnen
 
@@ -40,7 +40,7 @@ wall_layers = 1 # Anzahl der Wandschichten
 
 # Berechne c_0 basierend auf der größeren Komponente der Gravitation
 max_gravity = max(abs(gravity[0]), abs(gravity[1]))
-c_0 = 12 #10 * (2 * max_gravity * fluid_height) ** 0.5
+c_0 = 20 #10 * (2 * max_gravity * fluid_height) ** 0.5
 n_1 = 12.0
 n_2 = 4.0
 r_0 = spacing
