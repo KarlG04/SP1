@@ -122,4 +122,8 @@ def calculate_box_points(box_length, box_height, fluid_length, fluid_height, spa
     inlet_points_x, inlet_points_y = np.meshgrid(inlet_points_x, inlet_points_y)
     inlet_points = np.vstack([inlet_points_x.ravel(), inlet_points_y.ravel()]).T
 
+    # Hinzufügen der zufälligen Verschiebung
+    random_shift = np.random.uniform(0, 0.1, inlet_points.shape)
+    inlet_points += random_shift
+
     return boundary_points, inlet_points, boundary_description

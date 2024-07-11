@@ -139,7 +139,7 @@ def visualize_boundary(boundary_points, inlet_points, diameter_particle, boundar
 
 
 
-def visualize_flow(boundary_points, inlet_points, fluid_particles, delta_ts, diameter_particle, h):
+def visualize_flow(boundary_points, inlet_points, fluid_particles, delta_ts, diameter_particle, smoothing_length):
     fig, ax = plt.subplots(figsize=(10, 6), dpi=100)
     plt.subplots_adjust(bottom=0.35)  # Vergrößern des unteren Randes für Slider und Buttons
 
@@ -153,7 +153,7 @@ def visualize_flow(boundary_points, inlet_points, fluid_particles, delta_ts, dia
     fluid_labels = [ax.text(x, y, str(i), fontsize=7, color='green', visible=False) for i, (x, y) in enumerate(zip(fluid_particles[0][0], fluid_particles[1][0]))]
 
     # Glättungslänge als Kreise
-    fluid_circles = [plt.Circle((x, y), h, color='lightgray', fill=False, linestyle='-', linewidth=0.5, visible=False) for x, y in zip(fluid_particles[0][0], fluid_particles[1][0])]
+    fluid_circles = [plt.Circle((x, y), smoothing_length, color='lightgray', fill=False, linestyle='-', linewidth=0.5, visible=False) for x, y in zip(fluid_particles[0][0], fluid_particles[1][0])]
     smoothing_circles = fluid_circles
 
     for circle in smoothing_circles:
