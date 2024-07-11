@@ -4,6 +4,7 @@ import numpy as np
 import boundary
 import solver
 import visualization
+import isph_solver
 
 def main():
     print("Das Programm startet hier.")

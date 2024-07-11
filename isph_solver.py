@@ -4,41 +4,31 @@ from scipy.spatial import KDTree
 import math
 
 # Fluid-Eigenschaften gegeben
-initial_density = 1  # Dichte des Wassers in kg/m³
-diameter_particle = 5  # Partikeldurchmesser in m
-dynamic_viscosity = 0.5    # Dynamische Viskosität von Wasser bei Raumtemperatur in Pa·s (oder kg/(m·s))
+initial_density = 1000  # Dichte des Wassers in kg/m³
+diameter_particle = 0.02  # Partikeldurchmesser in m
+dynamic_viscosity = 0.01    # Dynamische Viskosität von Wasser bei Raumtemperatur in Pa·s (oder kg/(m·s))
 
 # Fluid-Eigenschaften berechnet
 spacing = diameter_particle  # Initialer Partikelabstand
 area_per_particle = np.pi * (diameter_particle / 2) ** 2 # Fläche eines Partikels in m²
 volume_per_particle = area_per_particle # Volumen in m³ (für 1D Tiefe)
 mass_per_particle = 1
-smoothing_length = 5
+smoothing_length = 1.5 * spacing
 kinematic_viscosity = dynamic_viscosity/initial_density # Kinematische viskosität berechnen
 
-# Kernel Factors
-density_factor = (315 * mass_per_particle) / (64 * np.pi * smoothing_length**9)
-pressure_factor = (-(65 * mass_per_particle) / (np.pi * smoothing_length**6)) # 65 war bei 45
-viscosity_factor = (45 * dynamic_viscosity * mass_per_particle) / (np.pi * smoothing_length**6)
-
-print (density_factor)
-print (pressure_factor)
-print (viscosity_factor)
-
 # Weitere Simulationsparameter
-num_time_steps = 2000 # Anzahl an Berechnungsintervallen
-isentropic_exponent = 20 
+num_time_steps = 200 # Anzahl an Berechnungsintervallen
 boundary_damping = -0.6
 delta_t = 0.01
 
 #Anfangsbedingungen
-gravity = (0.0, -0.0981)  # Gravitationskraft in m/s² (x-Komponente, y-Komponente)
+gravity = (0.0, -9.81)  # Gravitationskraft in m/s² (x-Komponente, y-Komponente)
 
 #Boxparameter
-box_length = 200 # Länge der Box in m
-box_height = 200 # Höhe der Box in m
-fluid_length = 50 # initiale Länge des Fluid-Blocks in m
-fluid_height = 150 # initiale Höhe des Fluid-Blocks in m
+box_length = 2 # Länge der Box in m
+box_height = 2 # Höhe der Box in m
+fluid_length = 0.5 # initiale Länge des Fluid-Blocks in m
+fluid_height = 0.5 # initiale Höhe des Fluid-Blocks in m
 
 boundary_spacing = 1*spacing # Abstand der Boundary Partikel
 wall_layers = 1 # Anzahl der Wandschichten
@@ -66,125 +56,36 @@ def find_neighbors(fluid_positions, smoothing_length):
 
     return neighbors, distances
 
-def calculate_density(density_factor, smoothing_length, distances):
-    num_particles = len(distances)
-    densities = [0.0] * num_particles
-
-    self_density = density_factor * (smoothing_length**2)**3
-
-    for i in range(num_particles):
-        density_sum = 0.0
-        for j, dij in distances[i]:
-            density_sum += density_factor * (smoothing_length**2 - dij**2)**3
-        densities[i] = self_density + density_sum
-
-    return densities
-
-def calculate_pressure(isentropic_exponent, initial_density, densities):
-    pressures = [0.0] * len(densities)
-    
-    for i in range(len(densities)):
-        pressures[i] = isentropic_exponent * (densities[i] - initial_density)
-
-    return pressures
-
-def calculate_pressure_force(pressure_factor, pressures, densities, distances, smoothing_length, fluid_positions):
+def calculate_grad_w(smoothing_length, distances, fluid_positions):
     num_particles = len(fluid_positions)
-    pressure_forces = [(0.0, 0.0) for _ in range(num_particles)]
+    grad_w = [[] for _ in range(num_particles)]
+
+    alpha_d = 10 / (7 * np.pi * smoothing_length ** 2)
 
     for i in range(num_particles):
-        sum_force_x = 0.0
-        sum_force_y = 0.0
-        xi, yi = fluid_positions[i]
-        pi = pressures[i]
-        
-        for j, dij in distances[i]:
-            xj, yj = fluid_positions[j]
-            pj = pressures[j]
-            rhoj = densities[j]
-            if rhoj == 0:
-                print ("rhoj ist 0")
-            if dij == 0:
-                print ("dij ist 0")
-                print (i)
-                print (j)
-            term = ((smoothing_length - dij)**2 * (pj + pi)) / ((2 * rhoj) * dij)
-             
-            sum_force_x += pressure_factor * -(xj - xi) * term
-            sum_force_y += pressure_factor * -(yj - yi) * term
-        
-        force_x = sum_force_x
-        force_y = sum_force_y
-        
-        pressure_forces[i] = (force_x, force_y)
+        for j, dist in distances[i]:
+            q = dist / smoothing_length
+            if 0 <= q <= 1:
+                grad_w_scalar = alpha_d * (-3 * q + (9 / 4) * q ** 2)
+            elif 1 < q <= 2:
+                grad_w_scalar = alpha_d * (-3 / 4) * (2 - q) ** 2
+            else:
+                grad_w_scalar = 0
 
-    return pressure_forces
+            x_i, y_i = fluid_positions[i]
+            x_j, y_j = fluid_positions[j]
+            r_ij = np.array([x_i - x_j, y_i - y_j])
+            r_ij_norm = np.linalg.norm(r_ij)
 
-def calculate_viscous_force(viscosity_factor, distances, smoothing_length, densities, fluid_velocities):
-    num_particles = len(distances)
-    viscous_forces = [(0.0, 0.0) for _ in range(num_particles)]
+            if r_ij_norm > 0:
+                grad_w_ij = grad_w_scalar * r_ij / (smoothing_length * r_ij_norm)
+            else:
+                grad_w_ij = np.array([0.0, 0.0])
 
-    for i in range(num_particles):
-        sum_force_x = 0.0
-        sum_force_y = 0.0
-        ui, vi = fluid_velocities[i]
+            grad_w[i].append((j, tuple(grad_w_ij)))
 
-        for j, dij in distances[i]:
-            uj, vj = fluid_velocities[j]
-            rhoj = densities[j]
+    return grad_w
 
-            term = (smoothing_length - dij) / rhoj
-
-            sum_force_x += viscosity_factor * (uj - ui) * term
-            sum_force_y += viscosity_factor * (vj - vi) * term
-
-        force_x = sum_force_x
-        force_y = sum_force_y
-
-        viscous_forces[i] = (force_x, force_y)
-
-    return viscous_forces
-
-def sum_up_forces(pressure_forces, viscous_forces, gravity):
-    num_particles = len(pressure_forces)
-    total_forces = [(0.0, 0.0) for _ in range(num_particles)]
-
-    for i in range(num_particles):
-        px, py = pressure_forces[i]
-        vx, vy = viscous_forces[i]
-        gx, gy = gravity
-
-        total_force_x = px + vx + gx
-        total_force_y = py + vx + gy
-
-        total_forces[i] = (total_force_x, total_force_y)
-
-    return total_forces
-
-def integrate_acceleration(fluid_positions, fluid_velocities, densities, delta_t, total_forces):
-    num_particles = len(fluid_positions)
-    new_fluid_positions = [(0.0, 0.0) for _ in range(num_particles)]
-    new_fluid_velocities = [(0.0, 0.0) for _ in range(num_particles)]
-    
-    for i in range(num_particles):
-        xi, yi = fluid_positions[i]
-        ui, vi = fluid_velocities[i]
-        rhoi = densities[i]
-        fx, fy = total_forces[i]
-
-        # Berechnung der neuen Geschwindigkeiten
-        new_ui = ui + delta_t * fx / rhoi
-        new_vi = vi + delta_t * fy / rhoi
-
-        # Berechnung der neuen Positionen
-        new_xi = xi + delta_t * new_ui
-        new_yi = yi + delta_t * new_vi
-
-        # Speichern der neuen Positionen und Geschwindigkeiten
-        new_fluid_positions[i] = (new_xi, new_yi)
-        new_fluid_velocities[i] = (new_ui, new_vi)
-
-    return new_fluid_positions, new_fluid_velocities
 
 def enforce_boundary_condition(fluid_positions, fluid_velocities, box_length, box_height, spacing, boundary_damping):
     for i in range(len(fluid_positions)):
@@ -234,18 +135,9 @@ def run_simulation(inlet_points, gravity, initial_density, num_time_steps, spaci
         iteration_step_start_time = time.perf_counter() # Startzeit für jeden einzelnen Iterationsschritt
 
         neighbors, distances = find_neighbors(fluid_positions, smoothing_length)
-        print (distances)
-        densities = calculate_density(density_factor, smoothing_length, distances)
 
-        pressures = calculate_pressure(isentropic_exponent, initial_density, densities) 
-
-        pressure_forces = calculate_pressure_force(pressure_factor, pressures, densities, distances, smoothing_length, fluid_positions)
-
-        viscous_forces = calculate_viscous_force(viscosity_factor, distances, smoothing_length, densities, fluid_velocities)
-
-        total_forces = sum_up_forces(pressure_forces, viscous_forces, gravity)
-
-        fluid_positions, fluid_velocities = integrate_acceleration(fluid_positions, fluid_velocities, densities, delta_t, total_forces)
+        grad_w = calculate_grad_w(smoothing_length, distances, fluid_positions)
+        print(grad_w)
 
         fluid_positions, fluid_velocities = enforce_boundary_condition(fluid_positions, fluid_velocities, box_length, box_height, spacing, boundary_damping)
 
