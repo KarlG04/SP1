@@ -3,71 +3,6 @@ import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 from matplotlib.widgets import Slider, Button
 
-def visualize_boundary_outlet(boundary_points, inlet_points, outlet_points, diameter_particle):
-    fig, ax = plt.subplots(figsize=(14, 6), dpi=100)
-
-    # Initiales Zeichnen der Punkte
-    boundary_plot, = ax.plot(boundary_points[:, 0], boundary_points[:, 1], 'o', color='#000000', label='Rohrpunkte')
-    inlet_plot, = ax.plot(inlet_points[:, 0], inlet_points[:, 1], 'o', color='#55ff4a', label='Einlasspunkte')
-    outlet_plot, = ax.plot(outlet_points[:, 0], outlet_points[:, 1], 'o', color='#ff4747', label='Auslasspunkte')
-
-    ax.axis('equal')
-    title = f'Visualisierung der festen Strukturen\nPartikeldurchmesser: {diameter_particle*1e6}µm'
-    ax.set_title(title)
-    ax.set_xlabel('X [m]')
-    ax.set_ylabel('Y [m]')
-    ax.grid(True)
-    ax.legend()
-
-    def update_marker_size():
-        xlim = ax.get_xlim()
-        ylim = ax.get_ylim()
-        ax_width = ax.get_window_extent().width
-        ax_height = ax.get_window_extent().height
-        x_range = xlim[1] - xlim[0]
-        y_range = ylim[1] - ylim[0]
-
-        # Berechnung des Skalierungsfaktors basierend auf dem kleineren Achsenbereich und der Fenstergröße
-        x_scale = ax_width / x_range
-        y_scale = ax_height / y_range
-        scale_factor = min(x_scale, y_scale)
-
-        # Berechnung der Markergröße in Punkten
-        marker_size = diameter_particle * scale_factor * 0.416
-        boundary_plot.set_markersize(marker_size)
-        inlet_plot.set_markersize(marker_size)
-        outlet_plot.set_markersize(marker_size)
-        plt.draw()
-
-    def on_scroll(event):
-        xdata, ydata = event.xdata, event.ydata
-        if xdata is None or ydata is None:
-            return
-        base_scale = 1.1
-        if event.button == 'up':
-            scale_factor = 1 / base_scale
-        elif event.button == 'down':
-            scale_factor = base_scale
-        else:
-            scale_factor = 1
-
-        ax.set_xlim([xdata - (xdata - ax.get_xlim()[0]) * scale_factor,
-                     xdata + (ax.get_xlim()[1] - xdata) * scale_factor])
-        ax.set_ylim([ydata - (ydata - ax.get_ylim()[0]) * scale_factor,
-                     ydata + (ax.get_ylim()[1] - ydata) * scale_factor])
-
-        update_marker_size()
-
-    def on_resize(event):
-        update_marker_size()
-
-    fig.canvas.mpl_connect('scroll_event', on_scroll)
-    fig.canvas.mpl_connect('resize_event', on_resize)
-
-    update_marker_size()
-
-    plt.show()
-
 def visualize_boundary(ax, diameter_particle, box_length, box_height, fluid_length, fluid_height):
     spacing = diameter_particle
     # Berechnen der inlet_points
@@ -81,22 +16,23 @@ def visualize_boundary(ax, diameter_particle, box_length, box_height, fluid_leng
     random_shift = np.random.uniform(0, 0.1, inlet_points.shape)
     inlet_points += random_shift
 
-    # Zeichnen der Begrenzung als schwarze Linien
-    ax.plot([0, box_length], [0, 0], color='black')  # untere Begrenzung
-    ax.plot([0, box_length], [box_height, box_height], color='black')  # obere Begrenzung
-    ax.plot([0, 0], [0, box_height], color='black')  # linke Begrenzung
-    ax.plot([box_length, box_length], [0, box_height], color='black')  # rechte Begrenzung
+    # Zeichnen der Begrenzung als dicke schwarze Linien
+    ax.plot([0, box_length], [0, 0], color='black', linewidth=10)  # untere Begrenzung
+    ax.plot([0, box_length], [box_height, box_height], color='black', linewidth=10)  # obere Begrenzung
+    ax.plot([0, 0], [0, box_height], color='black', linewidth=10)  # linke Begrenzung
+    ax.plot([box_length, box_length], [0, box_height], color='black', linewidth=10)  # rechte Begrenzung
 
     # Zeichnen der inlet_points
-    inlet_plot, = ax.plot(inlet_points[:, 0], inlet_points[:, 1], 'o', color='#55ff4a', label='Einlasspunkte')
+    inlet_plot, = ax.plot(inlet_points[:, 0], inlet_points[:, 1], 'o', color='#42a7f5')
 
     ax.axis('equal')
-    title = f'Visualisierung der festen Strukturen\nPartikeldurchmesser: {diameter_particle*1e6}µm'
+    num_fluid_points = len(inlet_points)
+    title = f'Anzahl der Fluidpunkte: {num_fluid_points}'
     ax.set_title(title)
     ax.set_xlabel('X [m]')
     ax.set_ylabel('Y [m]')
     ax.grid(True)
-    ax.legend()
+    ax.legend().remove()  # Entferne das Legendenelement
 
     def update_marker_size():
         xlim = ax.get_xlim()
@@ -112,7 +48,7 @@ def visualize_boundary(ax, diameter_particle, box_length, box_height, fluid_leng
         scale_factor = min(x_scale, y_scale)
 
         # Berechnung der Markergröße in Punkten
-        marker_size = diameter_particle * scale_factor * 0.416
+        marker_size = diameter_particle * scale_factor * 0.5
         inlet_plot.set_markersize(marker_size)
         plt.draw()
 
@@ -146,10 +82,10 @@ def visualize_boundary(ax, diameter_particle, box_length, box_height, fluid_leng
 
 
 
-def visualize_flow(fluid_particles, delta_ts, diameter_particle, smoothing_length, box_length, box_height):
-    fig, ax = plt.subplots(figsize=(10, 6), dpi=100)
-    plt.subplots_adjust(bottom=0.35)  # Vergrößern des unteren Randes für Slider und Buttons
 
+def visualize_flow(ax, fluid_particles, delta_ts, diameter_particle, smoothing_length, box_length, box_height):
+    ax.clear()
+    
     # Zeichnen der Begrenzung als schwarze Linien
     ax.plot([0, box_length], [0, 0], color='black')  # untere Begrenzung
     ax.plot([0, box_length], [box_height, box_height], color='black')  # obere Begrenzung
@@ -186,31 +122,31 @@ def visualize_flow(fluid_particles, delta_ts, diameter_particle, smoothing_lengt
         labels_visible = not labels_visible
         for label in fluid_labels:
             label.set_visible(labels_visible)
-        fig.canvas.draw_idle()
+        ax.figure.canvas.draw_idle()
 
     def toggle_circles(event):
         nonlocal circles_visible
         circles_visible = not circles_visible
         for circle in smoothing_circles:
             circle.set_visible(circles_visible)
-        fig.canvas.draw_idle()
+        ax.figure.canvas.draw_idle()
 
     def toggle_velocities(event):
         nonlocal velocities_visible
         velocities_visible = not velocities_visible
         for velocity in velocities:
             velocity.set_visible(velocities_visible)
-        fig.canvas.draw_idle()
+        ax.figure.canvas.draw_idle()
 
-    label_button_ax = fig.add_axes([0.45, 0.02, 0.1, 0.04])
+    label_button_ax = ax.figure.add_axes([0.45, 0.02, 0.1, 0.04])
     label_button = Button(label_button_ax, 'Toggle Labels', color='#ffffff', hovercolor='#f1f1f1')
     label_button.on_clicked(toggle_labels)
 
-    circle_button_ax = fig.add_axes([0.45, 0.07, 0.1, 0.04])
+    circle_button_ax = ax.figure.add_axes([0.45, 0.07, 0.1, 0.04])
     circle_button = Button(circle_button_ax, 'Toggle Circles', color='#ffffff', hovercolor='#f1f1f1')
     circle_button.on_clicked(toggle_circles)
 
-    velocities_button_ax = fig.add_axes([0.45, 0.12, 0.1, 0.04])
+    velocities_button_ax = ax.figure.add_axes([0.45, 0.12, 0.1, 0.04])
     velocities_button = Button(velocities_button_ax, 'Velocities', color='#ffffff', hovercolor='#f1f1f1')
     velocities_button.on_clicked(toggle_velocities)
 
@@ -221,7 +157,7 @@ def visualize_flow(fluid_particles, delta_ts, diameter_particle, smoothing_lengt
     ax.legend()
 
     # Position und Größe des Sliders anpassen, um die gleiche Breite wie das Hauptdiagramm zu haben
-    slider_ax = fig.add_axes([ax.get_position().x0, 0.23, ax.get_position().width, 0.03], facecolor='lightgoldenrodyellow')
+    slider_ax = ax.figure.add_axes([ax.get_position().x0, 0.23, ax.get_position().width, 0.03], facecolor='lightgoldenrodyellow')
     slider = Slider(slider_ax, 'Time Step', 1, len(fluid_particles[0]), valinit=1, valfmt='%d')
 
     initial_time = sum(delta_ts[:1])
@@ -250,7 +186,7 @@ def visualize_flow(fluid_particles, delta_ts, diameter_particle, smoothing_lengt
 
         current_time = sum(delta_ts[:time_step + 1])  # Zeit-Index bleibt gleich, weil delta_ts bei 0 beginnt
         time_text.set_text(f'Time: {current_time:.6f} s')
-        fig.canvas.draw_idle()
+        ax.figure.canvas.draw_idle()
 
     slider.on_changed(update)
 
@@ -300,17 +236,17 @@ def visualize_flow(fluid_particles, delta_ts, diameter_particle, smoothing_lengt
             slider.set_val(current_val - 1)
 
     # Button für vorwärts
-    next_button_ax = fig.add_axes([0.8, 0.02, 0.1, 0.04])
+    next_button_ax = ax.figure.add_axes([0.8, 0.02, 0.1, 0.04])
     next_button = Button(next_button_ax, 'Next', color='#ffffff', hovercolor='#f1f1f1')
     next_button.on_clicked(next_time_step)
 
     # Button für rückwärts
-    prev_button_ax = fig.add_axes([0.125, 0.02, 0.1, 0.04])
+    prev_button_ax = ax.figure.add_axes([0.125, 0.02, 0.1, 0.04])
     prev_button = Button(prev_button_ax, 'Previous', color='#ffffff', hovercolor='#f1f1f1')
     prev_button.on_clicked(prev_time_step)
 
-    fig.canvas.mpl_connect('scroll_event', on_scroll)
-    fig.canvas.mpl_connect('resize_event', on_resize)
+    ax.figure.canvas.mpl_connect('scroll_event', on_scroll)
+    ax.figure.canvas.mpl_connect('resize_event', on_resize)
 
     update_marker_size()
-    plt.show()
+    ax.figure.canvas.draw()

@@ -3,6 +3,7 @@
 import numpy as np
 import tkinter as tk
 from tkinter import ttk
+from tkinter import messagebox
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import matplotlib.pyplot as plt
 import solver
@@ -10,6 +11,7 @@ import visualization
 
 def main():
     root = tk.Tk()
+    root.state("zoomed")  # Setze das Fenster auf Vollbild
     app = DambreakApp(root)
     root.protocol("WM_DELETE_WINDOW", app.on_closing)  # Handle window close event
     root.mainloop()
@@ -45,27 +47,47 @@ class DambreakApp:
         
         # Add entries for parameters
         self.fluid_height = tk.DoubleVar(value=130.0)
+        self.fluid_height_prev = self.fluid_height.get()
         ttk.Label(self.control_frame, text="Fluid Height", font=label_font).pack(anchor=tk.W)
-        ttk.Entry(self.control_frame, textvariable=self.fluid_height, font=entry_font).pack(anchor=tk.W)
+        fluid_height_entry = ttk.Entry(self.control_frame, textvariable=self.fluid_height, font=entry_font)
+        fluid_height_entry.pack(anchor=tk.W)
+        fluid_height_entry.bind("<FocusOut>", self.on_parameter_change)
+        fluid_height_entry.bind("<Return>", self.on_parameter_change)
         
         self.fluid_length = tk.DoubleVar(value=50.0)
+        self.fluid_length_prev = self.fluid_length.get()
         ttk.Label(self.control_frame, text="Fluid Length", font=label_font).pack(anchor=tk.W)
-        ttk.Entry(self.control_frame, textvariable=self.fluid_length, font=entry_font).pack(anchor=tk.W)
+        fluid_length_entry = ttk.Entry(self.control_frame, textvariable=self.fluid_length, font=entry_font)
+        fluid_length_entry.pack(anchor=tk.W)
+        fluid_length_entry.bind("<FocusOut>", self.on_parameter_change)
+        fluid_length_entry.bind("<Return>", self.on_parameter_change)
         
         self.box_height = tk.DoubleVar(value=200.0)
+        self.box_height_prev = self.box_height.get()
         ttk.Label(self.control_frame, text="Box Height", font=label_font).pack(anchor=tk.W)
-        ttk.Entry(self.control_frame, textvariable=self.box_height, font=entry_font).pack(anchor=tk.W)
+        box_height_entry = ttk.Entry(self.control_frame, textvariable=self.box_height, font=entry_font)
+        box_height_entry.pack(anchor=tk.W)
+        box_height_entry.bind("<FocusOut>", self.on_parameter_change)
+        box_height_entry.bind("<Return>", self.on_parameter_change)
         
         self.box_length = tk.DoubleVar(value=200.0)
+        self.box_length_prev = self.box_length.get()
         ttk.Label(self.control_frame, text="Box Length", font=label_font).pack(anchor=tk.W)
-        ttk.Entry(self.control_frame, textvariable=self.box_length, font=entry_font).pack(anchor=tk.W)
+        box_length_entry = ttk.Entry(self.control_frame, textvariable=self.box_length, font=entry_font)
+        box_length_entry.pack(anchor=tk.W)
+        box_length_entry.bind("<FocusOut>", self.on_parameter_change)
+        box_length_entry.bind("<Return>", self.on_parameter_change)
         
         self.particle_diameter = tk.DoubleVar(value=5.0)
+        self.particle_diameter_prev = self.particle_diameter.get()
         ttk.Label(self.control_frame, text="Particle Diameter", font=label_font).pack(anchor=tk.W)
-        ttk.Entry(self.control_frame, textvariable=self.particle_diameter, font=entry_font).pack(anchor=tk.W)
+        particle_diameter_entry = ttk.Entry(self.control_frame, textvariable=self.particle_diameter, font=entry_font)
+        particle_diameter_entry.pack(anchor=tk.W)
+        particle_diameter_entry.bind("<FocusOut>", self.on_parameter_change)
+        particle_diameter_entry.bind("<Return>", self.on_parameter_change)
         
         # Add start button
-        ttk.Button(self.control_frame, text="Start Simulation", command=self.start_simulation, font=button_font).pack(anchor=tk.W, pady=20)
+        tk.Button(self.control_frame, text="Start Simulation", command=self.start_simulation, font=button_font).pack(anchor=tk.W, pady=20)
         
     def setup_plot(self):
         self.fig, self.ax = plt.subplots()
@@ -113,6 +135,46 @@ class DambreakApp:
         self.ax.clear()
         visualization.visualize_flow(self.ax, fluid_particles, delta_ts, self.particle_diameter.get(), 5, self.box_length.get(), self.box_height.get())
         self.canvas.draw()
+
+    def on_parameter_change(self, event=None):
+        # Validate parameters
+        fluid_height = self.fluid_height.get()
+        fluid_length = self.fluid_length.get()
+        box_height = self.box_height.get()
+        box_length = self.box_length.get()
+        particle_diameter = self.particle_diameter.get()
+        
+        if (fluid_height + particle_diameter) > box_height:
+            self.fluid_height.set(self.fluid_height_prev)
+            messagebox.showerror("Invalid Input", "(Fluid Height + Particle Diameter) darf nicht größer als Box Height sein.")
+            return
+        elif box_height < (fluid_height + particle_diameter):
+            self.box_height.set(self.box_height_prev)
+            messagebox.showerror("Invalid Input", "Box Height darf nicht kleiner als (Fluid Height + Particle Diameter) sein.")
+            return
+        
+        if (fluid_length + particle_diameter) > box_length:
+            self.fluid_length.set(self.fluid_length_prev)
+            messagebox.showerror("Invalid Input", "(Fluid Length + Particle Diameter) darf nicht größer als Box Length sein.")
+            return
+        elif box_length < (fluid_length + particle_diameter):
+            self.box_length.set(self.box_length_prev)
+            messagebox.showerror("Invalid Input", "(Box Length + Particle Diameter) darf nicht kleiner als Fluid Length sein.")
+            return
+        
+        if particle_diameter > fluid_length or particle_diameter > fluid_height:
+            self.particle_diameter.set(self.particle_diameter_prev)
+            messagebox.showerror("Invalid Input", "Particle Diameter darf nicht größer als Fluid Length oder Fluid Height sein.")
+            return
+
+        # Save current values as previous values
+        self.fluid_height_prev = fluid_height
+        self.fluid_length_prev = fluid_length
+        self.box_height_prev = box_height
+        self.box_length_prev = box_length
+        self.particle_diameter_prev = particle_diameter
+        
+        self.visualize_boundary()
 
     def on_closing(self):
         self.root.destroy()
