@@ -1,53 +1,24 @@
 import numpy as np
 import time
 from scipy.spatial import KDTree
-import math
 
-# Fluid-Eigenschaften gegeben
-initial_density = 1  # Dichte des Wassers in kg/m³
-diameter_particle = 5  # Partikeldurchmesser in m
-dynamic_viscosity = 0.5    # Dynamische Viskosität von Wasser bei Raumtemperatur in Pa·s (oder kg/(m·s))
+def initialize_fluid(fluid_length, fluid_height, spacing):
+    inlet_points_x, inlet_points_y = [], []
 
-# Fluid-Eigenschaften berechnet
-spacing = diameter_particle  # Initialer Partikelabstand
-area_per_particle = np.pi * (diameter_particle / 2) ** 2 # Fläche eines Partikels in m²
-volume_per_particle = area_per_particle # Volumen in m³ (für 1D Tiefe)
-mass_per_particle = 1
-smoothing_length = 5
-kinematic_viscosity = dynamic_viscosity/initial_density # Kinematische viskosität berechnen
+    inlet_points_x = np.linspace(spacing, fluid_length, int(fluid_length / spacing))
+    inlet_points_y = np.linspace(spacing, fluid_height, int(fluid_height / spacing))
 
-# Kernel Factors
-density_factor = (315 * mass_per_particle) / (64 * np.pi * smoothing_length**9)
-pressure_factor = (-(65 * mass_per_particle) / (np.pi * smoothing_length**6)) # 65 war bei 45
-viscosity_factor = (45 * dynamic_viscosity * mass_per_particle) / (np.pi * smoothing_length**6)
+    inlet_points_x, inlet_points_y = np.meshgrid(inlet_points_x, inlet_points_y)
+    inlet_points = np.vstack([inlet_points_x.ravel(), inlet_points_y.ravel()]).T
 
-print (density_factor)
-print (pressure_factor)
-print (viscosity_factor)
-
-# Weitere Simulationsparameter
-num_time_steps = 2000 # Anzahl an Berechnungsintervallen
-isentropic_exponent = 20 
-boundary_damping = -0.6
-delta_t = 0.01
-
-#Anfangsbedingungen
-gravity = (0.0, -0.0981)  # Gravitationskraft in m/s² (x-Komponente, y-Komponente)
-
-#Boxparameter
-box_length = 200 # Länge der Box in m
-box_height = 200 # Höhe der Box in m
-fluid_length = 50 # initiale Länge des Fluid-Blocks in m
-fluid_height = 150 # initiale Höhe des Fluid-Blocks in m
-
-boundary_spacing = 1*spacing # Abstand der Boundary Partikel
-wall_layers = 1 # Anzahl der Wandschichten
-
-def initialize_fluid(inlet_points):
+    # Hinzufügen der zufälligen Verschiebung
+    random_shift = np.random.uniform(0, 0.1, inlet_points.shape)
+    inlet_points += random_shift
+    
     # Konvertiere inlet_points in eine Liste von Tupeln
     fluid_positions = [tuple(point) for point in inlet_points]
     fluid_velocities = [(0.0, 0.0) for _ in fluid_positions]  # Initialize velocities to (0, 0) for each point
-    
+
     return fluid_positions, fluid_velocities
 
 def find_neighbors(fluid_positions, smoothing_length):
@@ -213,19 +184,18 @@ def enforce_boundary_condition(fluid_positions, fluid_velocities, box_length, bo
     
     return fluid_positions, fluid_velocities
 
-def run_simulation(inlet_points, gravity, initial_density, num_time_steps, spacing, smoothing_length, isentropic_exponent, delta_t, box_length, box_height, boundary_damping, density_factor, pressure_factor, viscosity_factor):
+def run_simulation(gravity, initial_density, num_time_steps, spacing, smoothing_length, isentropic_exponent, delta_t, box_length, box_height, fluid_length, fluid_height, boundary_damping, density_factor, pressure_factor, viscosity_factor):
     # Initialisieren der Simulation
-    fluid_positions, fluid_velocities = initialize_fluid(inlet_points)
-    current_density = [initial_density for _ in inlet_points]  # Initiale Dichten für jedes Partikel
-    current_pressure = [0 for _ in inlet_points]  # Initiale Drücke für jedes Partikel
+    fluid_positions, fluid_velocities = initialize_fluid(fluid_length, fluid_height, spacing)
     num_particles = len(fluid_positions)
 
     # Gesuchte Werte für jeden Zeitschritt initialisieren
     delta_t_collected = []  # Liste zum Speichern der delta_t Werte
     positions_collected = [] # Liste zum Speichern der Positionen
     velocities_collected = [] # Liste zum Speichern der Geschwindigkeitskomponenten
-    mirror_positions_collected = [] # Liste zum Speichern der Positionen der Spiegelpartikel
-    mirror_velocities_collected = [] # Liste zum Speichern der Geschwindigkeitskomponenten der Spiegelpartikel
+    densities_collected = [] # Liste zum Speichern der Dichten
+    pressures_collected = [] # Liste zum Speichern der Drücke
+    viscous_forces_collected = [] # Liste zum Speichern der viskosen Kräfte
 
     iteration_start_time = time.perf_counter()  # Startzeit für Iterationen messen
 
@@ -234,7 +204,7 @@ def run_simulation(inlet_points, gravity, initial_density, num_time_steps, spaci
         iteration_step_start_time = time.perf_counter() # Startzeit für jeden einzelnen Iterationsschritt
 
         neighbors, distances = find_neighbors(fluid_positions, smoothing_length)
-        print (distances)
+
         densities = calculate_density(density_factor, smoothing_length, distances)
 
         pressures = calculate_pressure(isentropic_exponent, initial_density, densities) 

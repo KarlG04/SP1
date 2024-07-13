@@ -68,16 +68,27 @@ def visualize_boundary_outlet(boundary_points, inlet_points, outlet_points, diam
 
     plt.show()
 
-def visualize_boundary(boundary_points, inlet_points, diameter_particle, boundary_description):
-    fig, ax = plt.subplots(figsize=(14, 6), dpi=100)
+def visualize_boundary(ax, diameter_particle, box_length, box_height, fluid_length, fluid_height):
+    spacing = diameter_particle
+    # Berechnen der inlet_points
+    inlet_points_x = np.linspace(spacing, fluid_length, int(fluid_length / spacing))
+    inlet_points_y = np.linspace(spacing, fluid_height, int(fluid_height / spacing))
 
-    # Initiales Zeichnen der Punkte
-    boundary_plot, = ax.plot(boundary_points[:, 0], boundary_points[:, 1], 'o', color='#000000', label='Rohrpunkte')
+    inlet_points_x, inlet_points_y = np.meshgrid(inlet_points_x, inlet_points_y)
+    inlet_points = np.vstack([inlet_points_x.ravel(), inlet_points_y.ravel()]).T
+
+    # Hinzufügen der zufälligen Verschiebung
+    random_shift = np.random.uniform(0, 0.1, inlet_points.shape)
+    inlet_points += random_shift
+
+    # Zeichnen der Begrenzung als schwarze Linien
+    ax.plot([0, box_length], [0, 0], color='black')  # untere Begrenzung
+    ax.plot([0, box_length], [box_height, box_height], color='black')  # obere Begrenzung
+    ax.plot([0, 0], [0, box_height], color='black')  # linke Begrenzung
+    ax.plot([box_length, box_length], [0, box_height], color='black')  # rechte Begrenzung
+
+    # Zeichnen der inlet_points
     inlet_plot, = ax.plot(inlet_points[:, 0], inlet_points[:, 1], 'o', color='#55ff4a', label='Einlasspunkte')
-
-    # Anzeigen der Boundary-Beschreibungen
-    for (x, y), desc in zip(boundary_points, boundary_description):
-        ax.text(x, y, desc, fontsize=8, ha='center', va='center', color='red')
 
     ax.axis('equal')
     title = f'Visualisierung der festen Strukturen\nPartikeldurchmesser: {diameter_particle*1e6}µm'
@@ -102,7 +113,6 @@ def visualize_boundary(boundary_points, inlet_points, diameter_particle, boundar
 
         # Berechnung der Markergröße in Punkten
         marker_size = diameter_particle * scale_factor * 0.416
-        boundary_plot.set_markersize(marker_size)
         inlet_plot.set_markersize(marker_size)
         plt.draw()
 
@@ -128,27 +138,27 @@ def visualize_boundary(boundary_points, inlet_points, diameter_particle, boundar
     def on_resize(event):
         update_marker_size()
 
-    fig.canvas.mpl_connect('scroll_event', on_scroll)
-    fig.canvas.mpl_connect('resize_event', on_resize)
+    ax.figure.canvas.mpl_connect('scroll_event', on_scroll)
+    ax.figure.canvas.mpl_connect('resize_event', on_resize)
 
     update_marker_size()
 
-    plt.show()
 
 
 
-
-
-def visualize_flow(boundary_points, inlet_points, fluid_particles, delta_ts, diameter_particle, smoothing_length):
+def visualize_flow(fluid_particles, delta_ts, diameter_particle, smoothing_length, box_length, box_height):
     fig, ax = plt.subplots(figsize=(10, 6), dpi=100)
     plt.subplots_adjust(bottom=0.35)  # Vergrößern des unteren Randes für Slider und Buttons
 
-    # Initiales Zeichnen der Punkte
-    boundary_plot, = ax.plot(boundary_points[:, 0], boundary_points[:, 1], 'o', color='#000000', label='Boundary Points')
+    # Zeichnen der Begrenzung als schwarze Linien
+    ax.plot([0, box_length], [0, 0], color='black')  # untere Begrenzung
+    ax.plot([0, box_length], [box_height, box_height], color='black')  # obere Begrenzung
+    ax.plot([0, 0], [0, box_height], color='black')  # linke Begrenzung
+    ax.plot([box_length, box_length], [0, box_height], color='black')  # rechte Begrenzung
+
+    # Initiales Zeichnen der Fluid-Partikel
     points, = ax.plot(fluid_particles[0][0], fluid_particles[1][0], 'o', color='#42a7f5', label='Fluid Particles')
 
-    # Nummern der Boundary-Punkte anzeigen, beginnend bei 0
-    boundary_labels = [ax.text(x, y, str(i), fontsize=7, color='red', visible=False) for i, (x, y) in enumerate(boundary_points)]
     # Nummern der Fluid-Punkte anzeigen, beginnend bei 0
     fluid_labels = [ax.text(x, y, str(i), fontsize=7, color='green', visible=False) for i, (x, y) in enumerate(zip(fluid_particles[0][0], fluid_particles[1][0]))]
 
@@ -162,7 +172,6 @@ def visualize_flow(boundary_points, inlet_points, fluid_particles, delta_ts, dia
     labels_visible = False
     circles_visible = False
     velocities_visible = False
-    mirror_visible = False
     velocities_vector_factor = 0.1
 
     # Initiales Zeichnen der Geschwindigkeitsvektoren (unsichtbar)
@@ -175,7 +184,7 @@ def visualize_flow(boundary_points, inlet_points, fluid_particles, delta_ts, dia
     def toggle_labels(event):
         nonlocal labels_visible
         labels_visible = not labels_visible
-        for label in boundary_labels + fluid_labels:
+        for label in fluid_labels:
             label.set_visible(labels_visible)
         fig.canvas.draw_idle()
 
@@ -259,8 +268,7 @@ def visualize_flow(boundary_points, inlet_points, fluid_particles, delta_ts, dia
         scale_factor = min(x_scale, y_scale)
 
         # Berechnung der Markergröße in Punkten
-        marker_size = diameter_particle * scale_factor * 0.416
-        boundary_plot.set_markersize(marker_size)
+        marker_size = diameter_particle * scale_factor * 0.4
         points.set_markersize(marker_size)
         plt.draw()
 
