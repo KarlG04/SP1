@@ -26,7 +26,7 @@ class DambreakApp:
         
     def setup_ui(self):
         # Create frames
-        self.control_frame = ttk.Frame(self.root, padding="10")
+        self.control_frame = ttk.Frame(self.root, padding="12")
         self.control_frame.pack(side=tk.RIGHT, fill=tk.Y)
         
         self.plot_frame = ttk.Frame(self.root, padding="10")
@@ -39,56 +39,114 @@ class DambreakApp:
         self.setup_plot()
         
     def setup_controls(self):
-        label_font = ("Helvetica", 14)
-        entry_font = ("Helvetica", 14)
-        button_font = ("Helvetica", 14, "bold")
+        label_font = ("Helvetica", 18)
+        entry_font = ("Helvetica", 18)
+        button_font = ("Helvetica", 18, "bold")
         
-        ttk.Label(self.control_frame, text="Simulationsparameter", font=label_font).pack(anchor=tk.W)
+        ttk.Label(self.control_frame, text="Simulationsparameter", font=("Helvetica", 19)).pack(anchor=tk.W)
         
         # Add entries for parameters
         self.fluid_height = tk.DoubleVar(value=130.0)
         self.fluid_height_prev = self.fluid_height.get()
-        ttk.Label(self.control_frame, text="Fluid Height", font=label_font).pack(anchor=tk.W)
+        ttk.Label(self.control_frame, text="Fluid Height [m]", font=label_font).pack(anchor=tk.W, pady=(20, 2))
         fluid_height_entry = ttk.Entry(self.control_frame, textvariable=self.fluid_height, font=entry_font)
-        fluid_height_entry.pack(anchor=tk.W)
+        fluid_height_entry.pack(anchor=tk.W, pady=(0, 20))
         fluid_height_entry.bind("<FocusOut>", self.on_parameter_change)
         fluid_height_entry.bind("<Return>", self.on_parameter_change)
         
         self.fluid_length = tk.DoubleVar(value=50.0)
         self.fluid_length_prev = self.fluid_length.get()
-        ttk.Label(self.control_frame, text="Fluid Length", font=label_font).pack(anchor=tk.W)
+        ttk.Label(self.control_frame, text="Fluid Length [m]", font=label_font).pack(anchor=tk.W, pady=(10, 2))
         fluid_length_entry = ttk.Entry(self.control_frame, textvariable=self.fluid_length, font=entry_font)
-        fluid_length_entry.pack(anchor=tk.W)
+        fluid_length_entry.pack(anchor=tk.W, pady=(0, 20))
         fluid_length_entry.bind("<FocusOut>", self.on_parameter_change)
         fluid_length_entry.bind("<Return>", self.on_parameter_change)
         
         self.box_height = tk.DoubleVar(value=200.0)
         self.box_height_prev = self.box_height.get()
-        ttk.Label(self.control_frame, text="Box Height", font=label_font).pack(anchor=tk.W)
+        ttk.Label(self.control_frame, text="Box Height [m]", font=label_font).pack(anchor=tk.W, pady=(10, 2))
         box_height_entry = ttk.Entry(self.control_frame, textvariable=self.box_height, font=entry_font)
-        box_height_entry.pack(anchor=tk.W)
+        box_height_entry.pack(anchor=tk.W, pady=(0, 20))
         box_height_entry.bind("<FocusOut>", self.on_parameter_change)
         box_height_entry.bind("<Return>", self.on_parameter_change)
         
         self.box_length = tk.DoubleVar(value=200.0)
         self.box_length_prev = self.box_length.get()
-        ttk.Label(self.control_frame, text="Box Length", font=label_font).pack(anchor=tk.W)
+        ttk.Label(self.control_frame, text="Box Length [m]", font=label_font).pack(anchor=tk.W, pady=(10, 2))
         box_length_entry = ttk.Entry(self.control_frame, textvariable=self.box_length, font=entry_font)
-        box_length_entry.pack(anchor=tk.W)
+        box_length_entry.pack(anchor=tk.W, pady=(0, 20))
         box_length_entry.bind("<FocusOut>", self.on_parameter_change)
         box_length_entry.bind("<Return>", self.on_parameter_change)
         
         self.particle_diameter = tk.DoubleVar(value=5.0)
         self.particle_diameter_prev = self.particle_diameter.get()
-        ttk.Label(self.control_frame, text="Particle Diameter", font=label_font).pack(anchor=tk.W)
+        ttk.Label(self.control_frame, text="Particle Diameter [m]", font=label_font).pack(anchor=tk.W, pady=(10, 2))
         particle_diameter_entry = ttk.Entry(self.control_frame, textvariable=self.particle_diameter, font=entry_font)
-        particle_diameter_entry.pack(anchor=tk.W)
+        particle_diameter_entry.pack(anchor=tk.W, pady=(0, 20))
         particle_diameter_entry.bind("<FocusOut>", self.on_parameter_change)
         particle_diameter_entry.bind("<Return>", self.on_parameter_change)
         
-        # Add start button
-        tk.Button(self.control_frame, text="Start Simulation", command=self.start_simulation, font=button_font).pack(anchor=tk.W, pady=20)
+        # Add entries for new parameters
+        self.initial_density = tk.DoubleVar(value=1.0)
+        ttk.Label(self.control_frame, text="Initial Density ρ [kg/m³]", font=label_font).pack(anchor=tk.W, pady=(10, 2))
+        initial_density_entry = ttk.Entry(self.control_frame, textvariable=self.initial_density, font=entry_font)
+        initial_density_entry.pack(anchor=tk.W, pady=(0, 20))
+
+        self.smoothing_length = tk.DoubleVar(value=5.0)
+        ttk.Label(self.control_frame, text="Smoothing Length [m]", font=label_font).pack(anchor=tk.W, pady=(10, 2))
+        smoothing_length_entry = ttk.Entry(self.control_frame, textvariable=self.smoothing_length, font=entry_font)
+        smoothing_length_entry.pack(anchor=tk.W, pady=(0, 20))
+
+        self.isentropic_exponent = tk.DoubleVar(value=20.0)
+        ttk.Label(self.control_frame, text="Isentropic Exponent ε [1]", font=label_font).pack(anchor=tk.W, pady=(10, 2))
+        isentropic_exponent_entry = ttk.Entry(self.control_frame, textvariable=self.isentropic_exponent, font=entry_font)
+        isentropic_exponent_entry.pack(anchor=tk.W, pady=(0, 20))
+
+        self.dynamic_viscosity = tk.DoubleVar(value=0.5)
+        ttk.Label(self.control_frame, text="dynamic viscosity µ [Ns/m²]", font=label_font).pack(anchor=tk.W, pady=(10, 2))
+        dynamic_viscosity_entry = ttk.Entry(self.control_frame, textvariable=self.dynamic_viscosity, font=entry_font)
+        dynamic_viscosity_entry.pack(anchor=tk.W, pady=(0, 20))
+
+        self.delta_t = tk.DoubleVar(value=0.01)
+        ttk.Label(self.control_frame, text="Δt [s]", font=label_font).pack(anchor=tk.W, pady=(10, 2))
+        delta_t_entry = ttk.Entry(self.control_frame, textvariable=self.delta_t, font=entry_font)
+        delta_t_entry.pack(anchor=tk.W, pady=(0, 20))
+
+        self.boundary_damping = tk.DoubleVar(value=-0.6)
+        ttk.Label(self.control_frame, text="Boundary Damping [1]", font=label_font).pack(anchor=tk.W, pady=(10, 2))
+        boundary_damping_entry = ttk.Entry(self.control_frame, textvariable=self.boundary_damping, font=entry_font)
+        boundary_damping_entry.pack(anchor=tk.W, pady=(0, 20))
         
+        # Add Gravity entries as a combined section with X and Y inputs
+        ttk.Label(self.control_frame, text="Gravity [m/s²]", font=label_font).pack(anchor=tk.W, pady=(10, 2))
+        gravity_frame = ttk.Frame(self.control_frame)
+        gravity_frame.pack(anchor=tk.W, pady=(0, 20))
+        
+        ttk.Label(gravity_frame, text="X", font=label_font).pack(side=tk.LEFT)
+        self.gravity_x = tk.DoubleVar(value=0.0)
+        gravity_x_entry = ttk.Entry(gravity_frame, textvariable=self.gravity_x, font=entry_font, width=7)
+        gravity_x_entry.pack(side=tk.LEFT, padx=(5, 20))
+
+        ttk.Label(gravity_frame, text="Y", font=label_font).pack(side=tk.LEFT)
+        self.gravity_y = tk.DoubleVar(value=-0.0981)
+        gravity_y_entry = ttk.Entry(gravity_frame, textvariable=self.gravity_y, font=entry_font, width=7)
+        gravity_y_entry.pack(side=tk.LEFT)
+        
+        self.num_time_steps = tk.IntVar(value=2000)
+        ttk.Label(self.control_frame, text="Time Steps [n]", font=label_font).pack(anchor=tk.W, pady=(10, 2))
+        num_time_steps_entry = ttk.Entry(self.control_frame, textvariable=self.num_time_steps, font=entry_font)
+        num_time_steps_entry.pack(anchor=tk.W, pady=(0, 20))
+        
+        # Add start button
+        start_button = tk.Button(self.control_frame, text="Start Simulation", command=self.start_simulation, font=button_font, bg="#1bde1b", fg="white")
+        start_button.pack(side=tk.BOTTOM, fill=tk.X, padx=12, pady=20)
+        start_button.config(relief="raised", bd=3, highlightthickness=2, highlightbackground="#1bde1b")
+
+        # Adjust the button style for rounded corners
+        style = ttk.Style()
+        style.configure("RoundedButton.TButton", relief="flat", borderwidth=1, padding=6, background="#1bde1b", foreground="white")
+        style.map("RoundedButton.TButton", background=[('active', '#76c776')])
+
     def setup_plot(self):
         self.fig, self.ax = plt.subplots()
         self.canvas = FigureCanvasTkAgg(self.fig, master=self.plot_frame)
@@ -108,17 +166,21 @@ class DambreakApp:
         
     def start_simulation(self):
         # Gather parameters
-        gravity = (0.0, -0.0981)
-        initial_density = 1
-        num_time_steps = 2000
+        gravity = (self.gravity_x.get(), self.gravity_y.get())
+        initial_density = self.initial_density.get()
+        num_time_steps = self.num_time_steps.get()
         spacing = self.particle_diameter.get()
-        smoothing_length = 5
-        isentropic_exponent = 20
-        delta_t = 0.01
-        boundary_damping = -0.6
-        density_factor = (315 * 1) / (64 * np.pi * smoothing_length**9)
-        pressure_factor = (-(65 * 1) / (np.pi * smoothing_length**6))
-        viscosity_factor = (45 * 0.5 * 1) / (np.pi * smoothing_length**6)
+        smoothing_length = self.smoothing_length.get()
+        isentropic_exponent = self.isentropic_exponent.get()
+        delta_t = self.delta_t.get()
+        boundary_damping = self.boundary_damping.get()
+        dynamic_viscosity = self.dynamic_viscosity.get()
+        mass_per_particle = 1
+
+        # Kernel Factors
+        density_factor = (315 * mass_per_particle) / (64 * np.pi * smoothing_length**9)
+        pressure_factor = (-(45 * mass_per_particle) / (np.pi * smoothing_length**6))
+        viscosity_factor = (45 * dynamic_viscosity * mass_per_particle) / (np.pi * smoothing_length**6)
         
         fluid_height = self.fluid_height.get()
         fluid_length = self.fluid_length.get()
