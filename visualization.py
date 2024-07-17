@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 from matplotlib.widgets import Slider, Button
 
-def visualize_boundary(ax, diameter_particle, box_length, box_height, fluid_length, fluid_height):
+def visualize_boundary(ax, diameter_particle, box_length, box_height, fluid_length, fluid_height, num_time_steps, delta_t):
     spacing = diameter_particle
     # Berechnen der inlet_points
     inlet_points_x = np.linspace(spacing, fluid_length, int(fluid_length / spacing))
@@ -25,10 +25,15 @@ def visualize_boundary(ax, diameter_particle, box_length, box_height, fluid_leng
     # Zeichnen der inlet_points
     inlet_plot, = ax.plot(inlet_points[:, 0], inlet_points[:, 1], 'o', color='#42a7f5')
 
+    # Berechne die Anzahl der Flüssigkeitspartikel und die simulierte Zeit
+    num_fluid_particles = len(inlet_points)
+    simulated_time = num_time_steps * delta_t
+
+    # Füge die Überschriften hinzu
+    ax.text(0.5, 1.05, f"Simulated time: {simulated_time:.2f} s", transform=ax.transAxes, ha="center", fontsize=16)
+    ax.text(0.5, 1.02, f"Number of fluid particles: {num_fluid_particles}", transform=ax.transAxes, ha="center", fontsize=16)
+
     ax.axis('equal')
-    num_fluid_points = len(inlet_points)
-    title = f'Anzahl der Fluidpunkte: {num_fluid_points}'
-    ax.set_title(title)
     ax.set_xlabel('X [m]')
     ax.set_ylabel('Y [m]')
     ax.grid(True)
@@ -78,6 +83,8 @@ def visualize_boundary(ax, diameter_particle, box_length, box_height, fluid_leng
     ax.figure.canvas.mpl_connect('resize_event', on_resize)
 
     update_marker_size()
+
+
 
 
 

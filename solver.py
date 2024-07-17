@@ -1,5 +1,6 @@
 import numpy as np
 import time
+from tqdm import tqdm
 from scipy.spatial import KDTree
 
 def initialize_fluid(fluid_length, fluid_height, spacing):
@@ -73,12 +74,6 @@ def calculate_pressure_force(pressure_factor, pressures, densities, distances, s
             xj, yj = fluid_positions[j]
             pj = pressures[j]
             rhoj = densities[j]
-            if rhoj == 0:
-                print ("rhoj ist 0")
-            if dij == 0:
-                print ("dij ist 0")
-                print (i)
-                print (j)
             term = ((smoothing_length - dij)**2 * (pj + pi)) / ((2 * rhoj) * dij)
              
             sum_force_x += pressure_factor * -(xj - xi) * term
@@ -184,6 +179,8 @@ def enforce_boundary_condition(fluid_positions, fluid_velocities, box_length, bo
     
     return fluid_positions, fluid_velocities
 
+
+
 def run_simulation(gravity, initial_density, num_time_steps, spacing, smoothing_length, isentropic_exponent, delta_t, box_length, box_height, fluid_length, fluid_height, boundary_damping, density_factor, pressure_factor, viscosity_factor):
     # Initialisieren der Simulation
     fluid_positions, fluid_velocities = initialize_fluid(fluid_length, fluid_height, spacing)
@@ -199,35 +196,23 @@ def run_simulation(gravity, initial_density, num_time_steps, spacing, smoothing_
 
     iteration_start_time = time.perf_counter()  # Startzeit für Iterationen messen
 
-    for t in range(num_time_steps):
-        print(f"Running iteration {t+1}/{num_time_steps} | ", end="")  # Ausgabe der aktuellen Iterationsnummer
+    progress_bar = tqdm(range(num_time_steps), desc="Running simulation", unit="step", leave=True, bar_format='{l_bar}{bar}{r_bar}')
+    for t in progress_bar:
         iteration_step_start_time = time.perf_counter() # Startzeit für jeden einzelnen Iterationsschritt
 
         neighbors, distances = find_neighbors(fluid_positions, smoothing_length)
-
         densities = calculate_density(density_factor, smoothing_length, distances)
-
         pressures = calculate_pressure(isentropic_exponent, initial_density, densities) 
-
         pressure_forces = calculate_pressure_force(pressure_factor, pressures, densities, distances, smoothing_length, fluid_positions)
-
         viscous_forces = calculate_viscous_force(viscosity_factor, distances, smoothing_length, densities, fluid_velocities)
-
         total_forces = sum_up_forces(pressure_forces, viscous_forces, gravity)
-
         fluid_positions, fluid_velocities = integrate_acceleration(fluid_positions, fluid_velocities, densities, delta_t, total_forces)
-
         fluid_positions, fluid_velocities = enforce_boundary_condition(fluid_positions, fluid_velocities, box_length, box_height, spacing, boundary_damping)
 
         # Ergebnisse für den aktuellen Zeitschritt speichern
         delta_t_collected.append(delta_t)  # delta_t sammeln
         positions_collected.append(fluid_positions.copy()) # Positionen sammeln
         velocities_collected.append(fluid_velocities.copy()) # Geschwindigkeiten sammeln
-
-        # Zeit für iterationsschritt berechnen und ausgeben
-        iteration_step_end_time = time.perf_counter()
-        iteration_step_time = iteration_step_end_time - iteration_step_start_time 
-        print(f"{iteration_step_time:.2f}s")
 
     # Iterationszeit berechnen und ausgeben
     iteration_end_time = time.perf_counter()  # Endzeit für Iterationen messen
