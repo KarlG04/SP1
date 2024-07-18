@@ -1,5 +1,4 @@
 # main.py
-# Importiere benötigte Module
 import numpy as np
 import tkinter as tk
 from tkinter import ttk
@@ -8,6 +7,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import matplotlib.pyplot as plt
 import solver
 import visualization
+import time
 
 def main():
     root = tk.Tk()
@@ -37,7 +37,7 @@ class DambreakApp:
         
         # Add a thick separator between the plot frame and the control frame
         self.separator_right = ttk.Frame(self.root, width=4, style="TSeparator")
-        self.separator_right.place(relx=0.875, rely=0.0, relheight=1.0)
+        self.separator_right.place(relx=0.875, relheight=1.0)
         
         # Add control elements
         self.setup_controls()
@@ -200,13 +200,68 @@ class DambreakApp:
         fluid_length = self.fluid_length.get()
         box_height = self.box_height.get()
         box_length = self.box_length.get()
+
+        # Open progress window
+        self.progress_window = tk.Toplevel(self.root)
+        self.progress_window.title("Simulation Progress")
+        self.progress_window.geometry("800x400")
+
+        self.progress_label = ttk.Label(self.progress_window, text="Simulation Progress", font=("Helvetica", 16))
+        self.progress_label.pack(pady=10)
         
+        progress_frame = ttk.Frame(self.progress_window)
+        progress_frame.pack(pady=10)
+        
+        self.progress_bar = ttk.Progressbar(progress_frame, orient='horizontal', mode='determinate', length=400)
+        self.progress_bar.pack(side=tk.LEFT, padx=(0, 20))
+        
+        self.iteration_label = ttk.Label(progress_frame, text="0/0 steps", font=("Helvetica", 14))
+        self.iteration_label.pack(side=tk.LEFT)
+        
+        self.time_per_step_label = ttk.Label(progress_frame, text="0.00s/step", font=("Helvetica", 14))
+        self.time_per_step_label.pack(side=tk.LEFT)
+        
+        self.result_label = ttk.Label(self.progress_window, text="", font=("Helvetica", 14))
+        self.result_label.pack(pady=10)
+        
+        self.progress_bar["maximum"] = num_time_steps
+
         # Run the simulation with the specified parameters
-        fluid_particles, delta_ts = solver.run_simulation(gravity, initial_density, num_time_steps, spacing, smoothing_length, isentropic_exponent, delta_t, box_length, box_height, fluid_length, fluid_height, boundary_damping, density_factor, pressure_factor, viscosity_factor)
+        self.run_simulation(gravity, initial_density, num_time_steps, spacing, smoothing_length, isentropic_exponent, delta_t, box_length, box_height, fluid_length, fluid_height, boundary_damping, density_factor, pressure_factor, viscosity_factor)
+        
+
+
+    def run_simulation(self, gravity, initial_density, num_time_steps, spacing, smoothing_length, isentropic_exponent, delta_t, box_length, box_height, fluid_length, fluid_height, boundary_damping, density_factor, pressure_factor, viscosity_factor):
+        start_time = time.time()
+        fluid_particles, delta_ts, iteration_time, array_build_time = solver.run_simulation(
+            gravity, initial_density, num_time_steps, spacing, smoothing_length, isentropic_exponent, delta_t,
+            box_length, box_height, fluid_length, fluid_height, boundary_damping, density_factor, pressure_factor,
+            viscosity_factor, self.update_progress
+        )
+        end_time = time.time()
+
+        def format_time(seconds):
+            hours = int(seconds // 3600)
+            minutes = int((seconds % 3600) // 60)
+            secs = seconds % 60
+            return f"{hours}h {minutes}m {secs:.2f}s"
+    
+        total_time = end_time - start_time
+        self.result_label.config(
+            text=f"Iteration time: {format_time(iteration_time)}\n"
+                f"Array build time: {format_time(array_build_time)}\n"
+                f"Total time: {format_time(total_time)}"
+        )
         
         # Update the plot with simulation results
         self.update_plot(fluid_particles, delta_ts)
-        
+
+    def update_progress(self, current_step, total_steps, step_time):
+        self.progress_bar["value"] = current_step
+        self.iteration_label.config(text=f"{current_step}/{total_steps} steps  |  ")
+        self.time_per_step_label.config(text=f"{step_time:.2f}s/step")
+        self.progress_bar.update()
+
     def update_plot(self, fluid_particles, delta_ts):
         self.ax.clear()
         visualization.visualize_flow(self.ax, fluid_particles, delta_ts, self.particle_diameter.get(), 5, self.box_length.get(), self.box_height.get())

@@ -181,23 +181,21 @@ def enforce_boundary_condition(fluid_positions, fluid_velocities, box_length, bo
 
 
 
-def run_simulation(gravity, initial_density, num_time_steps, spacing, smoothing_length, isentropic_exponent, delta_t, box_length, box_height, fluid_length, fluid_height, boundary_damping, density_factor, pressure_factor, viscosity_factor):
-    # Initialisieren der Simulation
+# solver.py
+import numpy as np
+import time
+
+def run_simulation(gravity, initial_density, num_time_steps, spacing, smoothing_length, isentropic_exponent, delta_t, box_length, box_height, fluid_length, fluid_height, boundary_damping, density_factor, pressure_factor, viscosity_factor, update_progress):
     fluid_positions, fluid_velocities = initialize_fluid(fluid_length, fluid_height, spacing)
     num_particles = len(fluid_positions)
 
-    # Gesuchte Werte für jeden Zeitschritt initialisieren
     delta_t_collected = []  # Liste zum Speichern der delta_t Werte
     positions_collected = [] # Liste zum Speichern der Positionen
     velocities_collected = [] # Liste zum Speichern der Geschwindigkeitskomponenten
-    densities_collected = [] # Liste zum Speichern der Dichten
-    pressures_collected = [] # Liste zum Speichern der Drücke
-    viscous_forces_collected = [] # Liste zum Speichern der viskosen Kräfte
 
     iteration_start_time = time.perf_counter()  # Startzeit für Iterationen messen
 
-    progress_bar = tqdm(range(num_time_steps), desc="Running simulation", unit="step", leave=True, bar_format='{l_bar}{bar}{r_bar}')
-    for t in progress_bar:
+    for t in range(num_time_steps):
         iteration_step_start_time = time.perf_counter() # Startzeit für jeden einzelnen Iterationsschritt
 
         neighbors, distances = find_neighbors(fluid_positions, smoothing_length)
@@ -209,24 +207,19 @@ def run_simulation(gravity, initial_density, num_time_steps, spacing, smoothing_
         fluid_positions, fluid_velocities = integrate_acceleration(fluid_positions, fluid_velocities, densities, delta_t, total_forces)
         fluid_positions, fluid_velocities = enforce_boundary_condition(fluid_positions, fluid_velocities, box_length, box_height, spacing, boundary_damping)
 
-        # Ergebnisse für den aktuellen Zeitschritt speichern
         delta_t_collected.append(delta_t)  # delta_t sammeln
         positions_collected.append(fluid_positions.copy()) # Positionen sammeln
         velocities_collected.append(fluid_velocities.copy()) # Geschwindigkeiten sammeln
 
-    # Iterationszeit berechnen und ausgeben
+        iteration_step_end_time = time.perf_counter()  # Endzeit für den Iterationsschritt
+        step_time = iteration_step_end_time - iteration_step_start_time
+
+        update_progress(t + 1, num_time_steps, step_time)  # Update progress
+
     iteration_end_time = time.perf_counter()  # Endzeit für Iterationen messen
     iteration_time = iteration_end_time - iteration_start_time  # Zeit für Iterationen berechnen
-    # Zeit in Stunden, Minuten und Sekunden umwandeln
-    iteration_time_hours = int(iteration_time // 3600)
-    iteration_time_minutes = int((iteration_time % 3600) // 60)
-    iteration_time_seconds = iteration_time % 60
-    print(f"Iteration time: {iteration_time_hours}h {iteration_time_minutes}m {iteration_time_seconds:.2f}s")
-    print(" ")
 
-    # Fluid_particles in Listenform initialisieren
     fluid_particles = [[], [], [], []]
-
     for t in range(num_time_steps):
         positions_x_collected = [pos[0] for pos in positions_collected[t]]
         positions_y_collected = [pos[1] for pos in positions_collected[t]]
@@ -238,23 +231,10 @@ def run_simulation(gravity, initial_density, num_time_steps, spacing, smoothing_
         fluid_particles[2].append(velocities_x_collected)
         fluid_particles[3].append(velocities_y_collected)
 
-    # Array build time berechnen und ausgeben
     array_build_end_time = time.perf_counter()  # Endzeit für das Erstellen des Arrays messen
     array_build_time = array_build_end_time - iteration_end_time  # Zeit für das Erstellen des Arrays berechnen
-    # Zeit in Stunden, Minuten und Sekunden umwandeln
-    array_build_time_hours = int(array_build_time // 3600)
-    array_build_time_minutes = int((array_build_time % 3600) // 60)
-    array_build_time_seconds = array_build_time % 60
-    print(f"Array build time: {array_build_time_hours}h {array_build_time_minutes}m {array_build_time_seconds:.2f}s")
-    print(" ")
 
-    # Gesamtzeit berechnen und ausgeben
     total_time = iteration_time + array_build_time  # Gesamtzeit berechnen
-    # Zeit in Stunden, Minuten und Sekunden umwandeln
-    total_time_hours = int(total_time // 3600)
-    total_time_minutes = int((total_time % 3600) // 60)
-    total_time_seconds = total_time % 60
-    print(f"Simulation completed in: {total_time_hours}h {total_time_minutes}m {total_time_seconds:.2f}s")
-    print(" ")
 
-    return fluid_particles, delta_t_collected
+    return fluid_particles, delta_t_collected, iteration_time, array_build_time
+
