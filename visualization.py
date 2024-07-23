@@ -5,31 +5,31 @@ from matplotlib.widgets import Slider, Button
 
 def visualize_boundary(ax, diameter_particle, box_length, box_height, fluid_length, fluid_height, num_time_steps, delta_t):
     spacing = diameter_particle
-    # Berechnen der inlet_points
+    # Calculate the inlet_points
     inlet_points_x = np.linspace(spacing, fluid_length, int(fluid_length / spacing))
     inlet_points_y = np.linspace(spacing, fluid_height, int(fluid_height / spacing))
 
     inlet_points_x, inlet_points_y = np.meshgrid(inlet_points_x, inlet_points_y)
     inlet_points = np.vstack([inlet_points_x.ravel(), inlet_points_y.ravel()]).T
 
-    # Hinzufügen der zufälligen Verschiebung
+    # Adding the random shift
     random_shift = np.random.uniform(0, 0.1, inlet_points.shape)
     inlet_points += random_shift
 
-    # Zeichnen der Begrenzung als dicke schwarze Linien
-    ax.plot([0, box_length], [0, 0], color='black', linewidth=10)  # untere Begrenzung
-    ax.plot([0, box_length], [box_height, box_height], color='black', linewidth=10)  # obere Begrenzung
-    ax.plot([0, 0], [0, box_height], color='black', linewidth=10)  # linke Begrenzung
-    ax.plot([box_length, box_length], [0, box_height], color='black', linewidth=10)  # rechte Begrenzung
+    # Drawing the boundary as thick black lines
+    ax.plot([0, box_length], [0, 0], color='black', linewidth=10)  # lower boundary
+    ax.plot([0, box_length], [box_height, box_height], color='black', linewidth=10)  # upper boundary
+    ax.plot([0, 0], [0, box_height], color='black', linewidth=10)  # left boundary
+    ax.plot([box_length, box_length], [0, box_height], color='black', linewidth=10)  # right boundary
 
-    # Zeichnen der inlet_points
+    # Drawing the inlet_points
     inlet_plot, = ax.plot(inlet_points[:, 0], inlet_points[:, 1], 'o', color='#42a7f5')
 
-    # Berechne die Anzahl der Flüssigkeitspartikel und die simulierte Zeit
+    # Calculate the number of fluid particles and the simulated time
     num_fluid_particles = len(inlet_points)
     simulated_time = num_time_steps * delta_t
 
-    # Füge die Überschriften hinzu
+    # Adding the titles
     ax.text(0.5, 1.05, f"Simulated time: {simulated_time:.2f} s", transform=ax.transAxes, ha="center", fontsize=16)
     ax.text(0.5, 1.02, f"Number of fluid particles: {num_fluid_particles}", transform=ax.transAxes, ha="center", fontsize=16)
 
@@ -37,7 +37,7 @@ def visualize_boundary(ax, diameter_particle, box_length, box_height, fluid_leng
     ax.set_xlabel('X [m]')
     ax.set_ylabel('Y [m]')
     ax.grid(True)
-    ax.legend().remove()  # Entferne das Legendenelement
+    ax.legend().remove()  # Remove the legend
 
     def update_marker_size():
         xlim = ax.get_xlim()
@@ -47,12 +47,12 @@ def visualize_boundary(ax, diameter_particle, box_length, box_height, fluid_leng
         x_range = xlim[1] - xlim[0]
         y_range = ylim[1] - ylim[0]
 
-        # Berechnung des Skalierungsfaktors basierend auf dem kleineren Achsenbereich und der Fenstergröße
+        # Calculation of the scaling factor based on the smaller axis range and the window size
         x_scale = ax_width / x_range
         y_scale = ax_height / y_range
         scale_factor = min(x_scale, y_scale)
 
-        # Berechnung der Markergröße in Punkten
+        # Calculation of the marker size in points
         marker_size = diameter_particle * scale_factor * 0.5
         inlet_plot.set_markersize(marker_size)
         plt.draw()
@@ -85,27 +85,22 @@ def visualize_boundary(ax, diameter_particle, box_length, box_height, fluid_leng
     update_marker_size()
 
 
-
-
-
-
-
 def visualize_flow(ax, fluid_particles, delta_ts, diameter_particle, smoothing_length, box_length, box_height):
     ax.clear()
     
-    # Zeichnen der Begrenzung als schwarze Linien
-    ax.plot([0, box_length], [0, 0], color='black')  # untere Begrenzung
-    ax.plot([0, box_length], [box_height, box_height], color='black')  # obere Begrenzung
-    ax.plot([0, 0], [0, box_height], color='black')  # linke Begrenzung
-    ax.plot([box_length, box_length], [0, box_height], color='black')  # rechte Begrenzung
+    # Drawing the boundary as black lines
+    ax.plot([0, box_length], [0, 0], color='black')  # lower boundary
+    ax.plot([0, box_length], [box_height, box_height], color='black')  # upper boundary
+    ax.plot([0, 0], [0, box_height], color='black')  # left boundary
+    ax.plot([box_length, box_length], [0, box_height], color='black')  # right boundary
 
-    # Initiales Zeichnen der Fluid-Partikel
-    points, = ax.plot(fluid_particles[0][0], fluid_particles[1][0], 'o', color='#42a7f5', label='Fluid Particles')
+    # Initial drawing of the fluid particles
+    points, = ax.plot(fluid_particles[0][0], fluid_particles[1][0], 'o', color='#42a7f5')
 
-    # Nummern der Fluid-Punkte anzeigen, beginnend bei 0
+    # Display numbers of fluid points, starting at 0
     fluid_labels = [ax.text(x, y, str(i), fontsize=7, color='green', visible=False) for i, (x, y) in enumerate(zip(fluid_particles[0][0], fluid_particles[1][0]))]
 
-    # Glättungslänge als Kreise
+    # Smoothing length as circles
     fluid_circles = [plt.Circle((x, y), smoothing_length, color='lightgray', fill=False, linestyle='-', linewidth=0.5, visible=False) for x, y in zip(fluid_particles[0][0], fluid_particles[1][0])]
     smoothing_circles = fluid_circles
 
@@ -117,7 +112,7 @@ def visualize_flow(ax, fluid_particles, delta_ts, diameter_particle, smoothing_l
     velocities_visible = False
     velocities_vector_factor = 0.1
 
-    # Initiales Zeichnen der Geschwindigkeitsvektoren (unsichtbar)
+    # Initial drawing of the velocity vectors (invisible)
     velocities = [ax.annotate('', xy=(fluid_particles[0][0][i] + velocities_vector_factor * fluid_particles[2][0][i], 
                                        fluid_particles[1][0][i] + velocities_vector_factor * fluid_particles[3][0][i]), 
                                xytext=(fluid_particles[0][0][i], fluid_particles[1][0][i]),
@@ -145,15 +140,20 @@ def visualize_flow(ax, fluid_particles, delta_ts, diameter_particle, smoothing_l
             velocity.set_visible(velocities_visible)
         ax.figure.canvas.draw_idle()
 
-    label_button_ax = ax.figure.add_axes([0.45, 0.02, 0.1, 0.04])
+    # Buttons to toggle labels, circles, and velocities
+    button_width = 0.1
+    button_height = 0.04
+    button_padding = 0.005
+
+    label_button_ax = ax.figure.add_axes([0.35, 0.02 + 3*(button_height + button_padding), button_width, button_height])
     label_button = Button(label_button_ax, 'Toggle Labels', color='#ffffff', hovercolor='#f1f1f1')
     label_button.on_clicked(toggle_labels)
 
-    circle_button_ax = ax.figure.add_axes([0.45, 0.07, 0.1, 0.04])
+    circle_button_ax = ax.figure.add_axes([0.35, 0.02 + 2*(button_height + button_padding), button_width, button_height])
     circle_button = Button(circle_button_ax, 'Toggle Circles', color='#ffffff', hovercolor='#f1f1f1')
     circle_button.on_clicked(toggle_circles)
 
-    velocities_button_ax = ax.figure.add_axes([0.45, 0.12, 0.1, 0.04])
+    velocities_button_ax = ax.figure.add_axes([0.35, 0.02 + button_height + button_padding, button_width, button_height])
     velocities_button = Button(velocities_button_ax, 'Velocities', color='#ffffff', hovercolor='#f1f1f1')
     velocities_button.on_clicked(toggle_velocities)
 
@@ -161,28 +161,27 @@ def visualize_flow(ax, fluid_particles, delta_ts, diameter_particle, smoothing_l
     ax.set_xlabel('X [m]')
     ax.set_ylabel('Y [m]')
     ax.grid(True)
-    ax.legend()
 
-    # Position und Größe des Sliders anpassen, um die gleiche Breite wie das Hauptdiagramm zu haben
-    slider_ax = ax.figure.add_axes([ax.get_position().x0, 0.23, ax.get_position().width, 0.03], facecolor='lightgoldenrodyellow')
+    # Adjust position and size of the slider to match the main plot's width
+    slider_ax = ax.figure.add_axes([0.25, 0.02, 0.5, 0.03], facecolor='lightgoldenrodyellow')
     slider = Slider(slider_ax, 'Time Step', 1, len(fluid_particles[0]), valinit=1, valfmt='%d')
 
     initial_time = sum(delta_ts[:1])
     time_text = ax.text(0.5, 1.04, f'Time: {initial_time:.6f} s', transform=ax.transAxes, ha='center')
 
     def update(val):
-        time_step = int(slider.val) - 1  # Slider-Wert in Array-Index umwandeln
+        time_step = int(slider.val) - 1  # Convert slider value to array index
         points.set_data(fluid_particles[0][time_step], fluid_particles[1][time_step])
 
-        # Aktualisieren der Fluid Labels
+        # Update fluid labels
         for label, (x, y) in zip(fluid_labels, zip(fluid_particles[0][time_step], fluid_particles[1][time_step])):
             label.set_position((x, y))
 
-        # Aktualisieren der Fluid Kreise
+        # Update fluid circles
         for circle, (x, y) in zip(fluid_circles, zip(fluid_particles[0][time_step], fluid_particles[1][time_step])):
             circle.center = (x, y)
 
-        # Aktualisieren der Geschwindigkeitsvektoren
+        # Update velocity vectors
         for velocity in velocities:
             velocity.remove()
         velocities[:] = [ax.annotate('', xy=(fluid_particles[0][time_step][i] + velocities_vector_factor * fluid_particles[2][time_step][i], 
@@ -191,7 +190,7 @@ def visualize_flow(ax, fluid_particles, delta_ts, diameter_particle, smoothing_l
                                    arrowprops=dict(facecolor='red', edgecolor='red', width=0.5, headwidth=3),
                                    visible=velocities_visible, zorder=5) for i in range(len(fluid_particles[0][time_step]))]
 
-        current_time = sum(delta_ts[:time_step + 1])  # Zeit-Index bleibt gleich, weil delta_ts bei 0 beginnt
+        current_time = sum(delta_ts[:time_step + 1])  # Time index remains the same because delta_ts starts at 0
         time_text.set_text(f'Time: {current_time:.6f} s')
         ax.figure.canvas.draw_idle()
 
@@ -205,12 +204,12 @@ def visualize_flow(ax, fluid_particles, delta_ts, diameter_particle, smoothing_l
         x_range = xlim[1] - xlim[0]
         y_range = ylim[1] - ylim[0]
 
-        # Berechnung des Skalierungsfaktors basierend auf dem kleineren Achsenbereich und der Fenstergröße
+        # Calculation of the scaling factor based on the smaller axis range and the window size
         x_scale = ax_width / x_range
         y_scale = ax_height / y_range
         scale_factor = min(x_scale, y_scale)
 
-        # Berechnung der Markergröße in Punkten
+        # Calculation of the marker size in points
         marker_size = diameter_particle * scale_factor * 0.4
         points.set_markersize(marker_size)
         plt.draw()
@@ -219,7 +218,7 @@ def visualize_flow(ax, fluid_particles, delta_ts, diameter_particle, smoothing_l
         # Center zoom around the mouse position
         x_click, y_click = event.xdata, event.ydata
         if x_click is None or y_click is None:
-            return  # Abbruch, falls Klick außerhalb der Achsen
+            return  # Abort if click is outside the axes
 
         scale_factor = 1.1 if event.button == 'up' else 0.9
         ax.set_xlim([x_click - (x_click - ax.get_xlim()[0]) * scale_factor,
@@ -242,13 +241,13 @@ def visualize_flow(ax, fluid_particles, delta_ts, diameter_particle, smoothing_l
         if current_val > slider.valmin:
             slider.set_val(current_val - 1)
 
-    # Button für vorwärts
-    next_button_ax = ax.figure.add_axes([0.8, 0.02, 0.1, 0.04])
+    # Button for forward
+    next_button_ax = ax.figure.add_axes([0.8, 0.02, button_width, button_height])
     next_button = Button(next_button_ax, 'Next', color='#ffffff', hovercolor='#f1f1f1')
     next_button.on_clicked(next_time_step)
 
-    # Button für rückwärts
-    prev_button_ax = ax.figure.add_axes([0.125, 0.02, 0.1, 0.04])
+    # Button for backward
+    prev_button_ax = ax.figure.add_axes([0.125, 0.02, button_width, button_height])
     prev_button = Button(prev_button_ax, 'Previous', color='#ffffff', hovercolor='#f1f1f1')
     prev_button.on_clicked(prev_time_step)
 

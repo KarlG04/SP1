@@ -1,6 +1,5 @@
 import numpy as np
 import time
-from tqdm import tqdm
 from scipy.spatial import KDTree
 
 def initialize_fluid(fluid_length, fluid_height, spacing):
@@ -12,11 +11,11 @@ def initialize_fluid(fluid_length, fluid_height, spacing):
     inlet_points_x, inlet_points_y = np.meshgrid(inlet_points_x, inlet_points_y)
     inlet_points = np.vstack([inlet_points_x.ravel(), inlet_points_y.ravel()]).T
 
-    # Hinzufügen der zufälligen Verschiebung
+    # Add random Offset
     random_shift = np.random.uniform(0, 0.1, inlet_points.shape)
     inlet_points += random_shift
     
-    # Konvertiere inlet_points in eine Liste von Tupeln
+    # Konvert inlet_points in a list of tupel
     fluid_positions = [tuple(point) for point in inlet_points]
     fluid_velocities = [(0.0, 0.0) for _ in fluid_positions]  # Initialize velocities to (0, 0) for each point
 
@@ -138,15 +137,12 @@ def integrate_acceleration(fluid_positions, fluid_velocities, densities, delta_t
         rhoi = densities[i]
         fx, fy = total_forces[i]
 
-        # Berechnung der neuen Geschwindigkeiten
         new_ui = ui + delta_t * fx / rhoi
         new_vi = vi + delta_t * fy / rhoi
 
-        # Berechnung der neuen Positionen
         new_xi = xi + delta_t * new_ui
         new_yi = yi + delta_t * new_vi
 
-        # Speichern der neuen Positionen und Geschwindigkeiten
         new_fluid_positions[i] = (new_xi, new_yi)
         new_fluid_velocities[i] = (new_ui, new_vi)
 
@@ -157,7 +153,6 @@ def enforce_boundary_condition(fluid_positions, fluid_velocities, box_length, bo
         x, y = fluid_positions[i]
         u, v = fluid_velocities[i]
 
-        # Überprüfe und korrigiere die x-Komponente der Position
         if x < spacing:
             x = spacing
             u *= boundary_damping
@@ -165,7 +160,6 @@ def enforce_boundary_condition(fluid_positions, fluid_velocities, box_length, bo
             x = box_length - spacing
             u *= boundary_damping
 
-        # Überprüfe und korrigiere die y-Komponente der Position
         if y < spacing:
             y = spacing
             v *= boundary_damping
@@ -173,68 +167,84 @@ def enforce_boundary_condition(fluid_positions, fluid_velocities, box_length, bo
             y = box_height - spacing
             v *= boundary_damping
 
-        # Speichere die aktualisierten Positionen und Geschwindigkeiten
         fluid_positions[i] = (x, y)
         fluid_velocities[i] = (u, v)
     
     return fluid_positions, fluid_velocities
 
 
-
-# solver.py
-import numpy as np
-import time
-
 def run_simulation(gravity, initial_density, num_time_steps, spacing, smoothing_length, isentropic_exponent, delta_t, box_length, box_height, fluid_length, fluid_height, boundary_damping, density_factor, pressure_factor, viscosity_factor, update_progress):
     fluid_positions, fluid_velocities = initialize_fluid(fluid_length, fluid_height, spacing)
-    num_particles = len(fluid_positions)
 
-    delta_t_collected = []  # Liste zum Speichern der delta_t Werte
-    positions_collected = [] # Liste zum Speichern der Positionen
-    velocities_collected = [] # Liste zum Speichern der Geschwindigkeitskomponenten
+    delta_t_collected = []  # List for collecting delta_t values
+    positions_collected = [] # List for collecting position components
+    velocities_collected = [] # List for collecting velocity components
+    densities_collected = [] # List for collecting densities
+    pressures_collected = [] # List for collecting pressures
+    viscous_forces_collected = [] # List for collecting viscous forces
 
-    iteration_start_time = time.perf_counter()  # Startzeit für Iterationen messen
+    iteration_start_time = time.perf_counter()  # Start time for measuring iterations
 
     for t in range(num_time_steps):
-        iteration_step_start_time = time.perf_counter() # Startzeit für jeden einzelnen Iterationsschritt
+        iteration_step_start_time = time.perf_counter() # Start time for each iteration step
 
+        # Get neighbors and their distances
         neighbors, distances = find_neighbors(fluid_positions, smoothing_length)
+        # Calculate densities
         densities = calculate_density(density_factor, smoothing_length, distances)
+        # Calculate pressures
         pressures = calculate_pressure(isentropic_exponent, initial_density, densities) 
+        # Calculate forces due to pressure
         pressure_forces = calculate_pressure_force(pressure_factor, pressures, densities, distances, smoothing_length, fluid_positions)
+        # Calculate forces due to viscosity
         viscous_forces = calculate_viscous_force(viscosity_factor, distances, smoothing_length, densities, fluid_velocities)
+        # Calculate resultant viscous forces
+        viscous_forces = np.array(viscous_forces)  # Ensure it is a NumPy array
+        resultant_viscous_forces = np.sqrt(viscous_forces[:, 0]**2 + viscous_forces[:, 1]**2)
+        # Sum up gravitational, viscous, and pressure forces
         total_forces = sum_up_forces(pressure_forces, viscous_forces, gravity)
+        # Integrate the acceleration to get the velocities and positions
         fluid_positions, fluid_velocities = integrate_acceleration(fluid_positions, fluid_velocities, densities, delta_t, total_forces)
+        # Enforce that the fluid particles stay within the defined boundary
         fluid_positions, fluid_velocities = enforce_boundary_condition(fluid_positions, fluid_velocities, box_length, box_height, spacing, boundary_damping)
 
-        delta_t_collected.append(delta_t)  # delta_t sammeln
-        positions_collected.append(fluid_positions.copy()) # Positionen sammeln
-        velocities_collected.append(fluid_velocities.copy()) # Geschwindigkeiten sammeln
+        delta_t_collected.append(delta_t)  # Collect delta_t
+        positions_collected.append(fluid_positions.copy()) # Collect positions
+        velocities_collected.append(fluid_velocities.copy()) # Collect velocities
+        densities_collected.append(densities.copy()) # Collect densities
+        pressures_collected.append(pressures.copy()) # Collect pressures
+        viscous_forces_collected.append(resultant_viscous_forces.copy()) # Collect resultant viscous forces
 
-        iteration_step_end_time = time.perf_counter()  # Endzeit für den Iterationsschritt
+        iteration_step_end_time = time.perf_counter()  # End time for the iteration step
         step_time = iteration_step_end_time - iteration_step_start_time
 
         update_progress(t + 1, num_time_steps, step_time)  # Update progress
 
-    iteration_end_time = time.perf_counter()  # Endzeit für Iterationen messen
-    iteration_time = iteration_end_time - iteration_start_time  # Zeit für Iterationen berechnen
+    iteration_end_time = time.perf_counter()  # End time for measuring iterations
+    iteration_time = iteration_end_time - iteration_start_time  # Calculate time for iterations
 
-    fluid_particles = [[], [], [], []]
+    fluid_particles = [[], [], [], [], [], [], [], []]
     for t in range(num_time_steps):
         positions_x_collected = [pos[0] for pos in positions_collected[t]]
         positions_y_collected = [pos[1] for pos in positions_collected[t]]
         velocities_x_collected = [vel[0] for vel in velocities_collected[t]]
         velocities_y_collected = [vel[1] for vel in velocities_collected[t]]
+        densities_collected_step = densities_collected[t]
+        pressures_collected_step = pressures_collected[t]
+        viscous_forces_collected_step = viscous_forces_collected[t]
 
         fluid_particles[0].append(positions_x_collected)
         fluid_particles[1].append(positions_y_collected)
         fluid_particles[2].append(velocities_x_collected)
         fluid_particles[3].append(velocities_y_collected)
+        fluid_particles[4].append(densities_collected_step)
+        fluid_particles[5].append(pressures_collected_step)
+        fluid_particles[6].append(viscous_forces_collected_step)
+        fluid_particles[7].append(delta_t_collected[t])
 
-    array_build_end_time = time.perf_counter()  # Endzeit für das Erstellen des Arrays messen
-    array_build_time = array_build_end_time - iteration_end_time  # Zeit für das Erstellen des Arrays berechnen
+    array_build_end_time = time.perf_counter()  # End time for building the array
+    array_build_time = array_build_end_time - iteration_end_time  # Calculate time for building the array
 
-    total_time = iteration_time + array_build_time  # Gesamtzeit berechnen
+    total_time = iteration_time + array_build_time  # Calculate total time
 
     return fluid_particles, delta_t_collected, iteration_time, array_build_time
-

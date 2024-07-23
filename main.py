@@ -5,13 +5,13 @@ from tkinter import ttk
 from tkinter import messagebox
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import matplotlib.pyplot as plt
+import time
 import solver
 import visualization
-import time
 
 def main():
     root = tk.Tk()
-    root.state("zoomed")  # Setze das Fenster auf Vollbild
+    root.state("zoomed")  # Set window to Fullscreen
     app = DambreakApp(root)
     root.protocol("WM_DELETE_WINDOW", app.on_closing)  # Handle window close event
     root.mainloop()
@@ -33,17 +33,29 @@ class DambreakApp:
         self.control_frame.place(relx=1.0, rely=0.5, anchor="e", relheight=1.0)
         
         self.plot_frame = ttk.Frame(self.root, padding="0")
-        self.plot_frame.place(relx=0.0, rely=0.0, anchor="nw", relheight=1.0, relwidth=0.875)
+        self.plot_frame.place(relx=0.0, rely=0.0, anchor="nw", relheight=0.75, relwidth=0.875)
         
         # Add a thick separator between the plot frame and the control frame
         self.separator_right = ttk.Frame(self.root, width=4, style="TSeparator")
         self.separator_right.place(relx=0.875, relheight=1.0)
         
+        # Add progress frame below the plot frame
+        self.progress_frame = ttk.Frame(self.root, padding="14")
+        self.progress_frame.place(relx=0.0, rely=0.75, anchor="nw", relheight=0.15, relwidth=0.875)
+        
+        # Add a separator between the plot frame and the progress frame
+        self.separator_bottom = ttk.Frame(self.root, height=4, style="TSeparator")
+        self.separator_bottom.place(relx=0.0, rely=0.75, anchor="nw", relwidth=0.875)
+
         # Add control elements
         self.setup_controls()
         
         # Add plot
         self.setup_plot()
+        
+        # Add progress elements
+        self.setup_progress()
+
 
     def setup_controls(self):
         label_font = ("Helvetica", 18)
@@ -164,6 +176,25 @@ class DambreakApp:
         self.canvas = FigureCanvasTkAgg(self.fig, master=self.plot_frame)
         self.canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
         self.visualize_boundary()
+
+    def setup_progress(self):
+        self.progress_label = ttk.Label(self.progress_frame, text="Simulation Progress", font=("Helvetica", 16))
+        self.progress_label.pack(pady=10)
+        
+        progress_frame = ttk.Frame(self.progress_frame)
+        progress_frame.pack(pady=10)
+        
+        self.progress_bar = ttk.Progressbar(progress_frame, orient='horizontal', mode='determinate', length=400)
+        self.progress_bar.pack(side=tk.LEFT, padx=(0, 20))
+        
+        self.iteration_label = ttk.Label(progress_frame, text="0/0 steps", font=("Helvetica", 14))
+        self.iteration_label.pack(side=tk.LEFT)
+        
+        self.time_per_step_label = ttk.Label(progress_frame, text="0.00s/step", font=("Helvetica", 14))
+        self.time_per_step_label.pack(side=tk.LEFT)
+        
+        self.result_label = ttk.Label(self.progress_frame, text="", font=("Helvetica", 14))
+        self.result_label.pack(pady=10)
         
     def visualize_boundary(self):
         # Initial visualization of the boundary
@@ -201,36 +232,12 @@ class DambreakApp:
         box_height = self.box_height.get()
         box_length = self.box_length.get()
 
-        # Open progress window
-        self.progress_window = tk.Toplevel(self.root)
-        self.progress_window.title("Simulation Progress")
-        self.progress_window.geometry("800x400")
-
-        self.progress_label = ttk.Label(self.progress_window, text="Simulation Progress", font=("Helvetica", 16))
-        self.progress_label.pack(pady=10)
-        
-        progress_frame = ttk.Frame(self.progress_window)
-        progress_frame.pack(pady=10)
-        
-        self.progress_bar = ttk.Progressbar(progress_frame, orient='horizontal', mode='determinate', length=400)
-        self.progress_bar.pack(side=tk.LEFT, padx=(0, 20))
-        
-        self.iteration_label = ttk.Label(progress_frame, text="0/0 steps", font=("Helvetica", 14))
-        self.iteration_label.pack(side=tk.LEFT)
-        
-        self.time_per_step_label = ttk.Label(progress_frame, text="0.00s/step", font=("Helvetica", 14))
-        self.time_per_step_label.pack(side=tk.LEFT)
-        
-        self.result_label = ttk.Label(self.progress_window, text="", font=("Helvetica", 14))
-        self.result_label.pack(pady=10)
-        
+        # Configure progress bar
         self.progress_bar["maximum"] = num_time_steps
 
         # Run the simulation with the specified parameters
         self.run_simulation(gravity, initial_density, num_time_steps, spacing, smoothing_length, isentropic_exponent, delta_t, box_length, box_height, fluid_length, fluid_height, boundary_damping, density_factor, pressure_factor, viscosity_factor)
         
-
-
     def run_simulation(self, gravity, initial_density, num_time_steps, spacing, smoothing_length, isentropic_exponent, delta_t, box_length, box_height, fluid_length, fluid_height, boundary_damping, density_factor, pressure_factor, viscosity_factor):
         start_time = time.time()
         fluid_particles, delta_ts, iteration_time, array_build_time = solver.run_simulation(
@@ -307,7 +314,7 @@ class DambreakApp:
         self.box_length_prev = box_length
         self.particle_diameter_prev = particle_diameter
         
-        # Aktualisiere den Plot
+        # Update the plot
         self.visualize_boundary()
 
     def on_closing(self):
