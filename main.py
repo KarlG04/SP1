@@ -33,7 +33,7 @@ class DambreakApp:
         self.control_frame.place(relx=1.0, rely=0.5, anchor="e", relheight=1.0)
         
         self.plot_frame = ttk.Frame(self.root, padding="0")
-        self.plot_frame.place(relx=0.0, rely=0.0, anchor="nw", relheight=0.75, relwidth=0.875)
+        self.plot_frame.place(relx=0.0, rely=0.0, anchor="nw", relheight=0.825, relwidth=0.875)
         
         # Add a thick separator between the plot frame and the control frame
         self.separator_right = ttk.Frame(self.root, width=4, style="TSeparator")
@@ -41,11 +41,11 @@ class DambreakApp:
         
         # Add progress frame below the plot frame
         self.progress_frame = ttk.Frame(self.root, padding="14")
-        self.progress_frame.place(relx=0.0, rely=0.75, anchor="nw", relheight=0.15, relwidth=0.875)
+        self.progress_frame.place(relx=0.0, rely=0.855, anchor="nw", relheight=0.2, relwidth=0.875)
         
         # Add a separator between the plot frame and the progress frame
         self.separator_bottom = ttk.Frame(self.root, height=4, style="TSeparator")
-        self.separator_bottom.place(relx=0.0, rely=0.75, anchor="nw", relwidth=0.875)
+        self.separator_bottom.place(relx=0.0, rely=0.825, anchor="nw", relwidth=0.875)
 
         # Add control elements
         self.setup_controls()
@@ -154,7 +154,7 @@ class DambreakApp:
         gravity_y_entry = ttk.Entry(gravity_frame, textvariable=self.gravity_y, font=entry_font, width=7)
         gravity_y_entry.pack(side=tk.LEFT)
         
-        self.num_time_steps = tk.IntVar(value=2000)
+        self.num_time_steps = tk.IntVar(value=200)
         ttk.Label(self.control_frame, text="Time Steps [n]", font=label_font).pack(anchor=tk.W, pady=(10, 2))
         num_time_steps_entry = ttk.Entry(self.control_frame, textvariable=self.num_time_steps, font=entry_font, width=entry_width)
         num_time_steps_entry.pack(anchor=tk.W, pady=(0, 20))
@@ -179,7 +179,7 @@ class DambreakApp:
 
     def setup_progress(self):
         self.progress_label = ttk.Label(self.progress_frame, text="Simulation Progress", font=("Helvetica", 16))
-        self.progress_label.pack(pady=10)
+        self.progress_label.pack(pady=0)
         
         progress_frame = ttk.Frame(self.progress_frame)
         progress_frame.pack(pady=10)
@@ -194,7 +194,7 @@ class DambreakApp:
         self.time_per_step_label.pack(side=tk.LEFT)
         
         self.result_label = ttk.Label(self.progress_frame, text="", font=("Helvetica", 14))
-        self.result_label.pack(pady=10)
+        self.result_label.pack(pady=20)
         
     def visualize_boundary(self):
         # Initial visualization of the boundary
@@ -270,8 +270,9 @@ class DambreakApp:
         self.progress_bar.update()
 
     def update_plot(self, fluid_particles, delta_ts):
+        plt.close('all')  # Close all open figures
         self.ax.clear()
-        visualization.visualize_flow(self.ax, fluid_particles, delta_ts, self.particle_diameter.get(), 5, self.box_length.get(), self.box_height.get())
+        visualization.visualize_flow(fluid_particles, delta_ts, self.particle_diameter.get(), 5, self.box_length.get(), self.box_height.get(), self.delta_t.get())
         self.canvas.draw()
 
     def on_parameter_change(self, event=None):
