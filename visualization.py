@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib import cm
 import matplotlib.animation as animation
 from matplotlib.animation import FuncAnimation
 from matplotlib.widgets import Slider, Button
@@ -96,7 +97,7 @@ def visualize_flow(fluid_particles, delta_ts, diameter_particle, smoothing_lengt
     ax.plot([box_length, box_length], [0, box_height], color='black', linewidth=8)  # right boundary
 
     # Initiales Zeichnen der Fluid-Partikel
-    points, = ax.plot(fluid_particles[0][0], fluid_particles[1][0], 'o', color='#42a7f5', picker=True)
+    points = ax.scatter(fluid_particles[0][0], fluid_particles[1][0], c='#42a7f5', picker=True)
 
     # Nummern der Fluid-Punkte anzeigen, beginnend bei 0
     fluid_labels = [ax.text(x, y, str(i), fontsize=9, color='black', ha='center', va='center', visible=False) for i, (x, y) in enumerate(zip(fluid_particles[0][0], fluid_particles[1][0]))]
@@ -111,6 +112,7 @@ def visualize_flow(fluid_particles, delta_ts, diameter_particle, smoothing_lengt
     labels_visible = False
     circles_visible = False
     velocities_visible = False
+    density_colored = False
     velocities_vector_factor = 0.1
 
     # Initiales Zeichnen der Geschwindigkeitsvektoren (unsichtbar)
@@ -139,6 +141,20 @@ def visualize_flow(fluid_particles, delta_ts, diameter_particle, smoothing_lengt
         velocities_visible = not velocities_visible
         for velocity in velocities:
             velocity.set_visible(velocities_visible)
+        fig.canvas.draw_idle()
+
+    def toggle_density_coloring(event):
+        nonlocal density_colored
+        density_colored = not density_colored
+        time_step = int(slider.val) - 1
+        if density_colored:
+            densities = fluid_particles[4][time_step]
+            norm = plt.Normalize(np.min(densities), np.max(densities))
+            cmap = cm.jet
+            colors = cmap(norm(densities))
+            points.set_facecolor(colors)
+        else:
+            points.set_facecolor('#42a7f5')
         fig.canvas.draw_idle()
 
     ax.set_aspect('equal')
@@ -187,7 +203,7 @@ def visualize_flow(fluid_particles, delta_ts, diameter_particle, smoothing_lengt
     ax.text(-0.9, 0.94, f'Max Pressure: {max_pressure:.6f} Pa (Particle {max_pressure_info[0]}, Step {max_pressure_info[1]})', transform=ax.transAxes, fontsize=12, verticalalignment='top')
     ax.text(-0.9, 0.90, f'Max Density: {max_density:.6f} kg/m^3 (Particle {max_density_info[0]}, Step {max_density_info[1]})', transform=ax.transAxes, fontsize=12, verticalalignment='top')
 
-    ax.text(-0.9, 0.85, 'Particle Informations (click Particle)', transform=ax.transAxes, fontsize=14, verticalalignment='top')
+    ax.text(-0.9, 0.75, 'Particle Informations (click Particle)', transform=ax.transAxes, fontsize=14, verticalalignment='top')
 
     def update_particle_info(particle_idx, time_step):
         nonlocal particle_info_text
@@ -196,19 +212,19 @@ def visualize_flow(fluid_particles, delta_ts, diameter_particle, smoothing_lengt
         particle_info_text = []
 
         if particle_idx is not None:
-            particle_info_text.append(ax.text(-0.9, 0.80, f'Particle: {particle_idx}', transform=ax.transAxes, fontsize=12, verticalalignment='top'))
-            particle_info_text.append(ax.text(-0.9, 0.75, f'X: {fluid_particles[0][time_step][particle_idx]:.6f} m', transform=ax.transAxes, fontsize=12, verticalalignment='top'))
-            particle_info_text.append(ax.text(-0.9, 0.70, f'Y: {fluid_particles[1][time_step][particle_idx]:.6f} m', transform=ax.transAxes, fontsize=12, verticalalignment='top'))
+            particle_info_text.append(ax.text(-0.9, 0.70, f'Particle: {particle_idx}', transform=ax.transAxes, fontsize=12, verticalalignment='top'))
+            particle_info_text.append(ax.text(-0.9, 0.65, f'X: {fluid_particles[0][time_step][particle_idx]:.6f} m', transform=ax.transAxes, fontsize=12, verticalalignment='top'))
+            particle_info_text.append(ax.text(-0.9, 0.60, f'Y: {fluid_particles[1][time_step][particle_idx]:.6f} m', transform=ax.transAxes, fontsize=12, verticalalignment='top'))
             speed = (fluid_particles[2][time_step][particle_idx]**2 + fluid_particles[3][time_step][particle_idx]**2)**0.5
-            particle_info_text.append(ax.text(-0.9, 0.65, f'Speed: {speed:.6f} m/s', transform=ax.transAxes, fontsize=12, verticalalignment='top'))
-            particle_info_text.append(ax.text(-0.9, 0.60, f'Density: {fluid_particles[4][time_step][particle_idx]:.6f} kg/m^3', transform=ax.transAxes, fontsize=12, verticalalignment='top'))
-            particle_info_text.append(ax.text(-0.9, 0.55, f'Pressure: {fluid_particles[5][time_step][particle_idx]:.6f} Pa', transform=ax.transAxes, fontsize=12, verticalalignment='top'))
+            particle_info_text.append(ax.text(-0.9, 0.55, f'Speed: {speed:.6f} m/s', transform=ax.transAxes, fontsize=12, verticalalignment='top'))
+            particle_info_text.append(ax.text(-0.9, 0.50, f'Density: {fluid_particles[4][time_step][particle_idx]:.6f} kg/m^3', transform=ax.transAxes, fontsize=12, verticalalignment='top'))
+            particle_info_text.append(ax.text(-0.9, 0.45, f'Pressure: {fluid_particles[5][time_step][particle_idx]:.6f} Pa', transform=ax.transAxes, fontsize=12, verticalalignment='top'))
 
         fig.canvas.draw_idle()
 
     def update(val):
         time_step = int(slider.val) - 1  # Slider-Wert in Array-Index umwandeln
-        points.set_data(fluid_particles[0][time_step], fluid_particles[1][time_step])
+        points.set_offsets(np.c_[fluid_particles[0][time_step], fluid_particles[1][time_step]])
 
         # Aktualisieren der Fluid Labels
         for label, (x, y) in zip(fluid_labels, zip(fluid_particles[0][time_step], fluid_particles[1][time_step])):
@@ -229,6 +245,15 @@ def visualize_flow(fluid_particles, delta_ts, diameter_particle, smoothing_lengt
 
         current_time = sum(delta_ts[:time_step + 1])  # Zeit-Index bleibt gleich, weil delta_ts bei 0 beginnt
         time_text.set_text(f'Time: {current_time:.3f} s')
+
+        if density_colored:
+            densities = fluid_particles[4][time_step]
+            norm = plt.Normalize(np.min(densities), np.max(densities))
+            cmap = cm.jet
+            colors = cmap(norm(densities))
+            points.set_facecolor(colors)
+        else:
+            points.set_facecolor('#42a7f5')
 
         if selected_particle is not None:
             update_particle_info(selected_particle, time_step)
@@ -252,7 +277,7 @@ def visualize_flow(fluid_particles, delta_ts, diameter_particle, smoothing_lengt
 
         # Berechnung der Markergröße in Punkten
         marker_size = diameter_particle * scale_factor * 0.4
-        points.set_markersize(marker_size)
+        points.set_sizes([marker_size] * len(fluid_particles[0][0]))
         plt.draw()
 
     def on_scroll(event):
@@ -288,6 +313,9 @@ def visualize_flow(fluid_particles, delta_ts, diameter_particle, smoothing_lengt
             return
         mouse_event = event.mouseevent
         x_mouse, y_mouse = mouse_event.xdata, mouse_event.ydata
+        if x_mouse is None or y_mouse is None:
+            return  # Abbruch, falls Klick außerhalb der Achsen
+
         distances = [(i, (x - x_mouse)**2 + (y - y_mouse)**2) for i, (x, y) in enumerate(zip(fluid_particles[0][int(slider.val) - 1], fluid_particles[1][int(slider.val) - 1]))]
         selected_particle = min(distances, key=lambda x: x[1])[0]
         update_particle_info(selected_particle, int(slider.val) - 1)
@@ -328,10 +356,11 @@ def visualize_flow(fluid_particles, delta_ts, diameter_particle, smoothing_lengt
     label_button.label.set_fontsize(12)
     label_button.on_clicked(toggle_labels)
 
-    circle_button_ax = fig.add_axes([0.235, 0.02, 0.1, 0.06])
-    circle_button = Button(circle_button_ax, 'Toggle Circles', color='#ffffff', hovercolor='#f1f1f1')
-    circle_button.label.set_fontsize(12)
-    circle_button.on_clicked(toggle_circles)
+    # Neuen Button für Densitys hinzufügen
+    density_button_ax = fig.add_axes([0.235, 0.02, 0.1, 0.06])
+    density_button = Button(density_button_ax, 'Densitys', color='#ffffff', hovercolor='#f1f1f1')
+    density_button.label.set_fontsize(12)
+    density_button.on_clicked(toggle_density_coloring)
 
     velocities_button_ax = fig.add_axes([0.345, 0.02, 0.1, 0.06])
     velocities_button = Button(velocities_button_ax, 'Velocities', color='#ffffff', hovercolor='#f1f1f1')
