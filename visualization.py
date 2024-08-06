@@ -113,14 +113,29 @@ def visualize_flow(fluid_particles, delta_ts, diameter_particle, smoothing_lengt
     circles_visible = False
     velocities_visible = False
     density_colored = False
+    colorbar_visible = False
+    velocities_colored = False
     velocities_vector_factor = 0.1
+
+    # Berechnung der globalen Min- und Max-Werte der Dichte und Geschwindigkeit über alle Zeitschritte
+    global_min_density = np.min([np.min(densities) for densities in fluid_particles[4]])
+    global_max_density = np.max([np.max(densities) for densities in fluid_particles[4]])
+    global_min_speed = np.min([np.min(np.sqrt(np.array(fluid_particles[2][t])**2 + np.array(fluid_particles[3][t])**2)) for t in range(len(fluid_particles[0]))])
+    global_max_speed = np.max([np.max(np.sqrt(np.array(fluid_particles[2][t])**2 + np.array(fluid_particles[3][t])**2)) for t in range(len(fluid_particles[0]))])
+    norm_density = plt.Normalize(global_min_density, global_max_density)
+    norm_speed = plt.Normalize(global_min_speed, global_max_speed)
+    cmap = cm.jet
+    mappable_density = cm.ScalarMappable(norm=norm_density, cmap=cmap)
+    mappable_speed = cm.ScalarMappable(norm=norm_speed, cmap=cmap)
 
     # Initiales Zeichnen der Geschwindigkeitsvektoren (unsichtbar)
     velocities = [ax.annotate('', xy=(fluid_particles[0][0][i] + velocities_vector_factor * fluid_particles[2][0][i], 
                                        fluid_particles[1][0][i] + velocities_vector_factor * fluid_particles[3][0][i]), 
                                xytext=(fluid_particles[0][0][i], fluid_particles[1][0][i]),
-                               arrowprops=dict(facecolor='red', edgecolor='red', width=0.5, headwidth=3),
+                               arrowprops=dict(facecolor='black', edgecolor='black', width=0.5, headwidth=3),
                                visible=False) for i in range(len(fluid_particles[0][0]))]
+
+    colorbar = None
 
     def toggle_labels(event):
         nonlocal labels_visible
@@ -137,24 +152,49 @@ def visualize_flow(fluid_particles, delta_ts, diameter_particle, smoothing_lengt
         fig.canvas.draw_idle()
 
     def toggle_velocities(event):
-        nonlocal velocities_visible
+        nonlocal velocities_visible, velocities_colored, colorbar_visible, colorbar
         velocities_visible = not velocities_visible
+        velocities_colored = not velocities_colored
+        time_step = int(slider.val) - 1
+        if velocities_colored:
+            speeds = np.sqrt(np.array(fluid_particles[2][time_step])**2 + np.array(fluid_particles[3][time_step])**2)
+            colors = cmap(norm_speed(speeds))
+            points.set_facecolor(colors)
+            if not colorbar_visible:
+                cax = fig.add_axes([0.75, 0.35, 0.02, 0.5])
+                colorbar = fig.colorbar(mappable_speed, cax=cax, orientation='vertical')
+                colorbar.set_label('Speed (m/s)')
+                colorbar.set_ticks(np.linspace(global_min_speed, global_max_speed, 5))
+                colorbar_visible = True
+        else:
+            points.set_facecolor('#42a7f5')
+            if colorbar_visible and colorbar is not None:
+                colorbar.remove()
+                colorbar_visible = False
+
         for velocity in velocities:
             velocity.set_visible(velocities_visible)
         fig.canvas.draw_idle()
 
     def toggle_density_coloring(event):
-        nonlocal density_colored
+        nonlocal density_colored, colorbar_visible, colorbar
         density_colored = not density_colored
         time_step = int(slider.val) - 1
         if density_colored:
             densities = fluid_particles[4][time_step]
-            norm = plt.Normalize(np.min(densities), np.max(densities))
-            cmap = cm.jet
-            colors = cmap(norm(densities))
+            colors = cmap(norm_density(densities))
             points.set_facecolor(colors)
+            if not colorbar_visible:
+                cax = fig.add_axes([0.75, 0.35, 0.02, 0.5])
+                colorbar = fig.colorbar(mappable_density, cax=cax, orientation='vertical')
+                colorbar.set_label('Density (kg/m^3)')
+                colorbar.set_ticks(np.linspace(global_min_density, global_max_density, 5))
+                colorbar_visible = True
         else:
             points.set_facecolor('#42a7f5')
+            if colorbar_visible and colorbar is not None:
+                colorbar.remove()
+                colorbar_visible = False
         fig.canvas.draw_idle()
 
     ax.set_aspect('equal')
@@ -186,13 +226,13 @@ def visualize_flow(fluid_particles, delta_ts, diameter_particle, smoothing_lengt
                 speed = (fluid_particles[2][t][i]**2 + fluid_particles[3][t][i]**2)**0.5
                 if speed > max_speed:
                     max_speed = speed
-                    max_speed_info = (i, t)
+                    max_speed_info = (i, t+1)
                 if fluid_particles[5][t][i] > max_pressure:
                     max_pressure = fluid_particles[5][t][i]
-                    max_pressure_info = (i, t)
+                    max_pressure_info = (i, t+1)
                 if fluid_particles[4][t][i] > max_density:
                     max_density = fluid_particles[4][t][i]
-                    max_density_info = (i, t)
+                    max_density_info = (i, t+1)
 
         return max_speed, max_speed_info, max_pressure, max_pressure_info, max_density, max_density_info
 
@@ -238,19 +278,23 @@ def visualize_flow(fluid_particles, delta_ts, diameter_particle, smoothing_lengt
         for velocity in velocities:
             velocity.remove()
         velocities[:] = [ax.annotate('', xy=(fluid_particles[0][time_step][i] + velocities_vector_factor * fluid_particles[2][time_step][i], 
-                                             fluid_particles[1][time_step][i] + velocities_vector_factor * fluid_particles[3][time_step][i]), 
-                                   xytext=(fluid_particles[0][time_step][i], fluid_particles[1][time_step][i]),
-                                   arrowprops=dict(facecolor='red', edgecolor='red', width=0.5, headwidth=3),
-                                   visible=velocities_visible, zorder=5) for i in range(len(fluid_particles[0][time_step]))]
+                                            fluid_particles[1][time_step][i] + velocities_vector_factor * fluid_particles[3][time_step][i]), 
+                                    xytext=(fluid_particles[0][time_step][i], fluid_particles[1][time_step][i]),
+                                    arrowprops=dict(facecolor='black', edgecolor='black', width=0.5, headwidth=3),
+                                    visible=velocities_visible, zorder=5) for i in range(len(fluid_particles[0][time_step]))]
 
         current_time = sum(delta_ts[:time_step + 1])  # Zeit-Index bleibt gleich, weil delta_ts bei 0 beginnt
         time_text.set_text(f'Time: {current_time:.3f} s')
 
+        # Umwandlung der Geschwindigkeitskomponenten in NumPy-Arrays für die Berechnung der Geschwindigkeit
+        speeds = np.sqrt(np.array(fluid_particles[2][time_step])**2 + np.array(fluid_particles[3][time_step])**2)
+
         if density_colored:
             densities = fluid_particles[4][time_step]
-            norm = plt.Normalize(np.min(densities), np.max(densities))
-            cmap = cm.jet
-            colors = cmap(norm(densities))
+            colors = cmap(norm_density(densities))
+            points.set_facecolor(colors)
+        elif velocities_colored:
+            colors = cmap(norm_speed(speeds))
             points.set_facecolor(colors)
         else:
             points.set_facecolor('#42a7f5')
@@ -276,7 +320,7 @@ def visualize_flow(fluid_particles, delta_ts, diameter_particle, smoothing_lengt
         scale_factor = min(x_scale, y_scale)
 
         # Berechnung der Markergröße in Punkten
-        marker_size = diameter_particle * scale_factor * 0.4
+        marker_size = diameter_particle * scale_factor * 4.2
         points.set_sizes([marker_size] * len(fluid_particles[0][0]))
         plt.draw()
 
@@ -356,12 +400,13 @@ def visualize_flow(fluid_particles, delta_ts, diameter_particle, smoothing_lengt
     label_button.label.set_fontsize(12)
     label_button.on_clicked(toggle_labels)
 
-    # Neuen Button für Densitys hinzufügen
+    # Neuen Button für Densities hinzufügen
     density_button_ax = fig.add_axes([0.235, 0.02, 0.1, 0.06])
-    density_button = Button(density_button_ax, 'Densitys', color='#ffffff', hovercolor='#f1f1f1')
+    density_button = Button(density_button_ax, 'Densities', color='#ffffff', hovercolor='#f1f1f1')
     density_button.label.set_fontsize(12)
     density_button.on_clicked(toggle_density_coloring)
 
+    # Neuen Button für Velocities hinzufügen
     velocities_button_ax = fig.add_axes([0.345, 0.02, 0.1, 0.06])
     velocities_button = Button(velocities_button_ax, 'Velocities', color='#ffffff', hovercolor='#f1f1f1')
     velocities_button.label.set_fontsize(12)
