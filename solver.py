@@ -2,6 +2,7 @@ import numpy as np
 import time
 from scipy.spatial import KDTree
 
+
 def initialize_fluid(fluid_length, fluid_height, spacing):
     inlet_points_x, inlet_points_y = [], []
 
@@ -12,7 +13,7 @@ def initialize_fluid(fluid_length, fluid_height, spacing):
     inlet_points = np.vstack([inlet_points_x.ravel(), inlet_points_y.ravel()]).T
 
     # Add random Offset
-    random_shift = np.random.uniform(0, 0.1, inlet_points.shape)
+    random_shift = np.random.uniform(0, 0.1 * spacing, inlet_points.shape)
     inlet_points += random_shift
     
     # Konvert inlet_points in a list of tupel
@@ -37,9 +38,11 @@ def find_neighbors(fluid_positions, smoothing_length):
 
     return neighbors, distances
 
-def calculate_density(density_factor, smoothing_length, distances):
+def calculate_density(mass_per_particle, smoothing_length, distances):
     num_particles = len(distances)
     densities = [0.0] * num_particles
+
+    density_factor = (315 * mass_per_particle) / (64 * np.pi * smoothing_length**9)
 
     self_density = density_factor * (smoothing_length**2)**3
 
@@ -59,9 +62,11 @@ def calculate_pressure(isentropic_exponent, initial_density, densities):
 
     return pressures
 
-def calculate_pressure_force(pressure_factor, pressures, densities, distances, smoothing_length, fluid_positions):
+def calculate_pressure_force(mass_per_particle, pressures, densities, distances, smoothing_length, fluid_positions):
     num_particles = len(fluid_positions)
     pressure_forces = [(0.0, 0.0) for _ in range(num_particles)]
+
+    pressure_factor = (-(45 * mass_per_particle) / (np.pi * smoothing_length**6))
 
     for i in range(num_particles):
         sum_force_x = 0.0
@@ -85,9 +90,11 @@ def calculate_pressure_force(pressure_factor, pressures, densities, distances, s
 
     return pressure_forces
 
-def calculate_viscous_force(viscosity_factor, distances, smoothing_length, densities, fluid_velocities):
+def calculate_viscous_force(mass_per_particle, dynamic_viscosity, distances, smoothing_length, densities, fluid_velocities):
     num_particles = len(distances)
     viscous_forces = [(0.0, 0.0) for _ in range(num_particles)]
+
+    viscosity_factor = (45 * dynamic_viscosity * mass_per_particle) / (np.pi * smoothing_length**6)
 
     for i in range(num_particles):
         sum_force_x = 0.0
@@ -120,7 +127,7 @@ def sum_up_forces(pressure_forces, viscous_forces, gravity):
         gx, gy = gravity
 
         total_force_x = px + vx + gx
-        total_force_y = py + vx + gy
+        total_force_y = py + vy + gy
 
         total_forces[i] = (total_force_x, total_force_y)
 
@@ -173,7 +180,7 @@ def enforce_boundary_condition(fluid_positions, fluid_velocities, box_length, bo
     return fluid_positions, fluid_velocities
 
 
-def run_simulation(gravity, initial_density, num_time_steps, spacing, smoothing_length, isentropic_exponent, delta_t, box_length, box_height, fluid_length, fluid_height, boundary_damping, density_factor, pressure_factor, viscosity_factor, update_progress):
+def run_simulation(gravity, initial_density, num_time_steps, spacing, smoothing_length, isentropic_exponent, delta_t, box_length, box_height, fluid_length, fluid_height, boundary_damping, mass_per_particle, dynamic_viscosity, update_progress):
     fluid_positions, fluid_velocities = initialize_fluid(fluid_length, fluid_height, spacing)
 
     delta_t_collected = []  # List for collecting delta_t values
@@ -191,13 +198,14 @@ def run_simulation(gravity, initial_density, num_time_steps, spacing, smoothing_
         # Get neighbors and their distances
         neighbors, distances = find_neighbors(fluid_positions, smoothing_length)
         # Calculate densities
-        densities = calculate_density(density_factor, smoothing_length, distances)
+        densities = calculate_density(mass_per_particle, smoothing_length, distances)
+        print(densities)
         # Calculate pressures
         pressures = calculate_pressure(isentropic_exponent, initial_density, densities) 
         # Calculate forces due to pressure
-        pressure_forces = calculate_pressure_force(pressure_factor, pressures, densities, distances, smoothing_length, fluid_positions)
+        pressure_forces = calculate_pressure_force(mass_per_particle, pressures, densities, distances, smoothing_length, fluid_positions)
         # Calculate forces due to viscosity
-        viscous_forces = calculate_viscous_force(viscosity_factor, distances, smoothing_length, densities, fluid_velocities)
+        viscous_forces = calculate_viscous_force(mass_per_particle, dynamic_viscosity, distances, smoothing_length, densities, fluid_velocities)
         # Calculate resultant viscous forces
         viscous_forces = np.array(viscous_forces)  # Ensure it is a NumPy array
         resultant_viscous_forces = np.sqrt(viscous_forces[:, 0]**2 + viscous_forces[:, 1]**2)

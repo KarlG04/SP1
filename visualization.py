@@ -15,7 +15,7 @@ def visualize_boundary(ax, diameter_particle, box_length, box_height, fluid_leng
     inlet_points = np.vstack([inlet_points_x.ravel(), inlet_points_y.ravel()]).T
 
     # Adding the random shift
-    random_shift = np.random.uniform(0, 0.1, inlet_points.shape)
+    random_shift = np.random.uniform(0, 0.1 * spacing, inlet_points.shape)
     inlet_points += random_shift
 
     # Drawing the boundary as thick black lines
