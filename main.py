@@ -66,7 +66,7 @@ class DambreakApp:
         ttk.Label(self.control_frame, text="Simulationsparameter", font=("Helvetica", 19)).pack(anchor=tk.W)
         
         # Add entries for parameters
-        self.fluid_height = tk.DoubleVar(value=0.2)
+        self.fluid_height = tk.DoubleVar(value=320)
         self.fluid_height_prev = self.fluid_height.get()
         ttk.Label(self.control_frame, text="Fluid Height [m]", font=label_font).pack(anchor=tk.W, pady=(20, 2))
         fluid_height_entry = ttk.Entry(self.control_frame, textvariable=self.fluid_height, font=entry_font, width=entry_width)
@@ -74,15 +74,15 @@ class DambreakApp:
         fluid_height_entry.bind("<FocusOut>", self.on_parameter_change)
         fluid_height_entry.bind("<Return>", self.on_parameter_change)
         
-        self.fluid_length = tk.DoubleVar(value=0.1)
-        self.fluid_length_prev = self.fluid_length.get()
-        ttk.Label(self.control_frame, text="Fluid Length [m]", font=label_font).pack(anchor=tk.W, pady=(10, 2))
-        fluid_length_entry = ttk.Entry(self.control_frame, textvariable=self.fluid_length, font=entry_font, width=entry_width)
-        fluid_length_entry.pack(anchor=tk.W, pady=(0, 20))
-        fluid_length_entry.bind("<FocusOut>", self.on_parameter_change)
-        fluid_length_entry.bind("<Return>", self.on_parameter_change)
+        self.fluid_width = tk.DoubleVar(value=160)
+        self.fluid_width_prev = self.fluid_width.get()
+        ttk.Label(self.control_frame, text="Fluid Width [m]", font=label_font).pack(anchor=tk.W, pady=(10, 2))
+        fluid_width_entry = ttk.Entry(self.control_frame, textvariable=self.fluid_width, font=entry_font, width=entry_width)
+        fluid_width_entry.pack(anchor=tk.W, pady=(0, 20))
+        fluid_width_entry.bind("<FocusOut>", self.on_parameter_change)
+        fluid_width_entry.bind("<Return>", self.on_parameter_change)
         
-        self.box_height = tk.DoubleVar(value=0.4)
+        self.box_height = tk.DoubleVar(value=500)
         self.box_height_prev = self.box_height.get()
         ttk.Label(self.control_frame, text="Box Height [m]", font=label_font).pack(anchor=tk.W, pady=(10, 2))
         box_height_entry = ttk.Entry(self.control_frame, textvariable=self.box_height, font=entry_font, width=entry_width)
@@ -90,15 +90,15 @@ class DambreakApp:
         box_height_entry.bind("<FocusOut>", self.on_parameter_change)
         box_height_entry.bind("<Return>", self.on_parameter_change)
         
-        self.box_length = tk.DoubleVar(value=0.4)
-        self.box_length_prev = self.box_length.get()
-        ttk.Label(self.control_frame, text="Box Length [m]", font=label_font).pack(anchor=tk.W, pady=(10, 2))
-        box_length_entry = ttk.Entry(self.control_frame, textvariable=self.box_length, font=entry_font, width=entry_width)
-        box_length_entry.pack(anchor=tk.W, pady=(0, 20))
-        box_length_entry.bind("<FocusOut>", self.on_parameter_change)
-        box_length_entry.bind("<Return>", self.on_parameter_change)
+        self.box_width = tk.DoubleVar(value=500)
+        self.box_width_prev = self.box_width.get()
+        ttk.Label(self.control_frame, text="Box Width [m]", font=label_font).pack(anchor=tk.W, pady=(10, 2))
+        box_width_entry = ttk.Entry(self.control_frame, textvariable=self.box_width, font=entry_font, width=entry_width)
+        box_width_entry.pack(anchor=tk.W, pady=(0, 20))
+        box_width_entry.bind("<FocusOut>", self.on_parameter_change)
+        box_width_entry.bind("<Return>", self.on_parameter_change)
         
-        self.particle_diameter = tk.DoubleVar(value=0.01)
+        self.particle_diameter = tk.DoubleVar(value=16)
         self.particle_diameter_prev = self.particle_diameter.get()
         ttk.Label(self.control_frame, text="Particle Diameter [m]", font=label_font).pack(anchor=tk.W, pady=(10, 2))
         particle_diameter_entry = ttk.Entry(self.control_frame, textvariable=self.particle_diameter, font=entry_font, width=entry_width)
@@ -106,23 +106,22 @@ class DambreakApp:
         particle_diameter_entry.bind("<FocusOut>", self.on_parameter_change)
         particle_diameter_entry.bind("<Return>", self.on_parameter_change)
         
-        # Add entries for new parameters
-        self.initial_density = tk.DoubleVar(value=1000.0)
-        ttk.Label(self.control_frame, text="Initial Density [kg/m³]", font=label_font).pack(anchor=tk.W, pady=(10, 2))
-        initial_density_entry = ttk.Entry(self.control_frame, textvariable=self.initial_density, font=entry_font, width=entry_width)
+        self.rest_density = tk.DoubleVar(value=300)
+        ttk.Label(self.control_frame, text="Rest Density [kg/m³]", font=label_font).pack(anchor=tk.W, pady=(10, 2))
+        initial_density_entry = ttk.Entry(self.control_frame, textvariable=self.rest_density, font=entry_font, width=entry_width)
         initial_density_entry.pack(anchor=tk.W, pady=(0, 20))
 
-        self.mass_per_particle = tk.DoubleVar(value=0.000524)
+        self.mass_per_particle = tk.DoubleVar(value=2.5)
         ttk.Label(self.control_frame, text="Mass/Particle [kg]", font=label_font).pack(anchor=tk.W, pady=(10, 2))
         mass_per_particle_entry = ttk.Entry(self.control_frame, textvariable=self.mass_per_particle, font=entry_font, width=entry_width)
         mass_per_particle_entry.pack(anchor=tk.W, pady=(0, 20))
 
-        self.smoothing_length = tk.DoubleVar(value=0.015)
+        self.smoothing_length = tk.DoubleVar(value=16)
         ttk.Label(self.control_frame, text="Smoothing Length [m]", font=label_font).pack(anchor=tk.W, pady=(10, 2))
         smoothing_length_entry = ttk.Entry(self.control_frame, textvariable=self.smoothing_length, font=entry_font, width=entry_width)
         smoothing_length_entry.pack(anchor=tk.W, pady=(0, 20))
 
-        self.isentropic_exponent = tk.DoubleVar(value=7.0)
+        self.isentropic_exponent = tk.DoubleVar(value=2000.0)
         ttk.Label(self.control_frame, text="Isentropic Exponent [1]", font=label_font).pack(anchor=tk.W, pady=(10, 2))
         isentropic_exponent_entry = ttk.Entry(self.control_frame, textvariable=self.isentropic_exponent, font=entry_font, width=entry_width)
         isentropic_exponent_entry.pack(anchor=tk.W, pady=(0, 20))
@@ -132,7 +131,7 @@ class DambreakApp:
         dynamic_viscosity_entry = ttk.Entry(self.control_frame, textvariable=self.dynamic_viscosity, font=entry_font, width=entry_width)
         dynamic_viscosity_entry.pack(anchor=tk.W, pady=(0, 20))
 
-        self.delta_t = tk.DoubleVar(value=0.01)
+        self.delta_t = tk.DoubleVar(value=0.0005)
         ttk.Label(self.control_frame, text="Δt [s]", font=label_font).pack(anchor=tk.W, pady=(10, 2))
         delta_t_entry = ttk.Entry(self.control_frame, textvariable=self.delta_t, font=entry_font, width=entry_width)
         delta_t_entry.pack(anchor=tk.W, pady=(0, 20))
@@ -206,9 +205,9 @@ class DambreakApp:
         self.ax.clear()
         visualization.visualize_boundary(self.ax, 
                                          self.particle_diameter.get(), 
-                                         self.box_length.get(), 
+                                         self.box_width.get(), 
                                          self.box_height.get(), 
-                                         self.fluid_length.get(), 
+                                         self.fluid_width.get(), 
                                          self.fluid_height.get(),
                                          self.num_time_steps.get(),
                                          self.delta_t.get())
@@ -217,7 +216,7 @@ class DambreakApp:
     def start_simulation(self):
         # Gather parameters
         gravity = (self.gravity_x.get(), self.gravity_y.get())
-        initial_density = self.initial_density.get()
+        rest_density = self.rest_density.get()
         num_time_steps = self.num_time_steps.get()
         spacing = self.particle_diameter.get()
         smoothing_length = self.smoothing_length.get()
@@ -228,21 +227,21 @@ class DambreakApp:
         mass_per_particle = self.mass_per_particle.get()
         
         fluid_height = self.fluid_height.get()
-        fluid_length = self.fluid_length.get()
+        fluid_width = self.fluid_width.get()
         box_height = self.box_height.get()
-        box_length = self.box_length.get()
+        box_width = self.box_width.get()
 
         # Configure progress bar
         self.progress_bar["maximum"] = num_time_steps
 
         # Run the simulation with the specified parameters
-        self.run_simulation(gravity, initial_density, num_time_steps, spacing, smoothing_length, isentropic_exponent, delta_t, box_length, box_height, fluid_length, fluid_height, boundary_damping, mass_per_particle, dynamic_viscosity)
+        self.run_simulation(gravity, rest_density, num_time_steps, spacing, smoothing_length, isentropic_exponent, delta_t, box_width, box_height, fluid_width, fluid_height, boundary_damping, mass_per_particle, dynamic_viscosity)
         
-    def run_simulation(self, gravity, initial_density, num_time_steps, spacing, smoothing_length, isentropic_exponent, delta_t, box_length, box_height, fluid_length, fluid_height, boundary_damping, mass_per_particle, dynamic_viscosity):
+    def run_simulation(self, gravity, rest_density, num_time_steps, spacing, smoothing_length, isentropic_exponent, delta_t, box_width, box_height, fluid_width, fluid_height, boundary_damping, mass_per_particle, dynamic_viscosity):
         start_time = time.time()
         fluid_particles, delta_ts, iteration_time, array_build_time = solver.run_simulation(
-            gravity, initial_density, num_time_steps, spacing, smoothing_length, isentropic_exponent, delta_t,
-            box_length, box_height, fluid_length, fluid_height, boundary_damping, mass_per_particle, dynamic_viscosity, self.update_progress
+            gravity, rest_density, num_time_steps, spacing, smoothing_length, isentropic_exponent, delta_t,
+            box_width, box_height, fluid_width, fluid_height, boundary_damping, mass_per_particle, dynamic_viscosity, self.update_progress
         )
         end_time = time.time()
 
@@ -271,15 +270,15 @@ class DambreakApp:
     def update_plot(self, fluid_particles, delta_ts):
         plt.close('all')  # Close all open figures
         self.ax.clear()
-        visualization.visualize_flow(fluid_particles, delta_ts, self.particle_diameter.get(), 5, self.box_length.get(), self.box_height.get(), self.delta_t.get())
+        visualization.visualize_flow(fluid_particles, delta_ts, self.particle_diameter.get(), 5, self.box_width.get(), self.box_height.get(), self.delta_t.get())
         self.canvas.draw()
 
     def on_parameter_change(self, event=None):
         # Validate parameters
         fluid_height = self.fluid_height.get()
-        fluid_length = self.fluid_length.get()
+        fluid_width = self.fluid_width.get()
         box_height = self.box_height.get()
-        box_length = self.box_length.get()
+        box_width = self.box_width.get()
         particle_diameter = self.particle_diameter.get()
         delta_t = self.delta_t.get()
         num_time_steps = self.num_time_steps.get()
@@ -293,25 +292,25 @@ class DambreakApp:
             messagebox.showerror("Invalid Input", "Box Height darf nicht kleiner als (Fluid Height + Particle Diameter) sein.")
             return
         
-        if (fluid_length + particle_diameter) > box_length:
-            self.fluid_length.set(self.fluid_length_prev)
-            messagebox.showerror("Invalid Input", "(Fluid Length + Particle Diameter) darf nicht größer als Box Length sein.")
+        if (fluid_width + particle_diameter) > box_width:
+            self.fluid_width.set(self.fluid_length_prev)
+            messagebox.showerror("Invalid Input", "(Fluid Width + Particle Diameter) darf nicht größer als Box Width sein.")
             return
-        elif box_length < (fluid_length + particle_diameter):
+        elif box_width < (fluid_width + particle_diameter):
             self.box_length.set(self.box_length_prev)
-            messagebox.showerror("Invalid Input", "(Box Length + Particle Diameter) darf nicht kleiner als Fluid Length sein.")
+            messagebox.showerror("Invalid Input", "(Box Width + Particle Diameter) darf nicht kleiner als Fluid Width sein.")
             return
         
-        if particle_diameter > fluid_length or particle_diameter > fluid_height:
+        if particle_diameter > fluid_width or particle_diameter > fluid_height:
             self.particle_diameter.set(self.particle_diameter_prev)
-            messagebox.showerror("Invalid Input", "Particle Diameter darf nicht größer als Fluid Length oder Fluid Height sein.")
+            messagebox.showerror("Invalid Input", "Particle Diameter darf nicht größer als Fluid Width oder Fluid Height sein.")
             return
 
         # Save current values as previous values
         self.fluid_height_prev = fluid_height
-        self.fluid_length_prev = fluid_length
+        self.fluid_width_prev = fluid_width
         self.box_height_prev = box_height
-        self.box_length_prev = box_length
+        self.box_width_prev = box_width
         self.particle_diameter_prev = particle_diameter
         
         # Update the plot

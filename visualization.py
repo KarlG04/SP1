@@ -5,10 +5,10 @@ import matplotlib.animation as animation
 from matplotlib.animation import FuncAnimation
 from matplotlib.widgets import Slider, Button
 
-def visualize_boundary(ax, diameter_particle, box_length, box_height, fluid_length, fluid_height, num_time_steps, delta_t):
+def visualize_boundary(ax, diameter_particle, box_width, box_height, fluid_width, fluid_height, num_time_steps, delta_t):
     spacing = diameter_particle
     # Calculate the inlet_points
-    inlet_points_x = np.linspace(spacing, fluid_length, int(fluid_length / spacing))
+    inlet_points_x = np.linspace(spacing, fluid_width, int(fluid_width / spacing))
     inlet_points_y = np.linspace(spacing, fluid_height, int(fluid_height / spacing))
 
     inlet_points_x, inlet_points_y = np.meshgrid(inlet_points_x, inlet_points_y)
@@ -19,10 +19,10 @@ def visualize_boundary(ax, diameter_particle, box_length, box_height, fluid_leng
     inlet_points += random_shift
 
     # Drawing the boundary as thick black lines
-    ax.plot([0, box_length], [0, 0], color='black', linewidth=8)  # lower boundary
-    ax.plot([0, box_length], [box_height, box_height], color='black', linewidth=8)  # upper boundary
+    ax.plot([0, box_width], [0, 0], color='black', linewidth=8)  # lower boundary
+    ax.plot([0, box_width], [box_height, box_height], color='black', linewidth=8)  # upper boundary
     ax.plot([0, 0], [0, box_height], color='black', linewidth=8)  # left boundary
-    ax.plot([box_length, box_length], [0, box_height], color='black', linewidth=8)  # right boundary
+    ax.plot([box_width, box_width], [0, box_height], color='black', linewidth=8)  # right boundary
 
     # Drawing the inlet_points
     inlet_plot, = ax.plot(inlet_points[:, 0], inlet_points[:, 1], 'o', color='#42a7f5')
@@ -86,15 +86,15 @@ def visualize_boundary(ax, diameter_particle, box_length, box_height, fluid_leng
 
     update_marker_size()
 
-def visualize_flow(fluid_particles, delta_ts, diameter_particle, smoothing_length, box_length, box_height, delta_t):
+def visualize_flow(fluid_particles, delta_ts, diameter_particle, smoothing_length, box_width, box_height, delta_t):
     fig, ax = plt.subplots(figsize=(10, 6), dpi=100)
     plt.subplots_adjust(bottom=0.3)  # Vergrößern des unteren Randes für Slider und Buttons
 
     # Drawing the boundary as thick black lines
-    ax.plot([0, box_length], [0, 0], color='black', linewidth=8)  # lower boundary
-    ax.plot([0, box_length], [box_height, box_height], color='black', linewidth=8)  # upper boundary
+    ax.plot([0, box_width], [0, 0], color='black', linewidth=8)  # lower boundary
+    ax.plot([0, box_width], [box_height, box_height], color='black', linewidth=8)  # upper boundary
     ax.plot([0, 0], [0, box_height], color='black', linewidth=8)  # left boundary
-    ax.plot([box_length, box_length], [0, box_height], color='black', linewidth=8)  # right boundary
+    ax.plot([box_width, box_width], [0, box_height], color='black', linewidth=8)  # right boundary
 
     # Initiales Zeichnen der Fluid-Partikel
     points = ax.scatter(fluid_particles[0][0], fluid_particles[1][0], c='#42a7f5', picker=True)
@@ -129,11 +129,14 @@ def visualize_flow(fluid_particles, delta_ts, diameter_particle, smoothing_lengt
     mappable_speed = cm.ScalarMappable(norm=norm_speed, cmap=cmap)
 
     # Initiales Zeichnen der Geschwindigkeitsvektoren (unsichtbar)
-    velocities = [ax.annotate('', xy=(fluid_particles[0][0][i] + velocities_vector_factor * fluid_particles[2][0][i], 
-                                       fluid_particles[1][0][i] + velocities_vector_factor * fluid_particles[3][0][i]), 
-                               xytext=(fluid_particles[0][0][i], fluid_particles[1][0][i]),
-                               arrowprops=dict(facecolor='black', edgecolor='black', width=0.5, headwidth=3),
-                               visible=False) for i in range(len(fluid_particles[0][0]))]
+    fixed_vector_length = 0.1  # Definiere eine feste Länge für die Geschwindigkeitsvektoren
+
+    velocities = [ax.annotate('', 
+                            xy=(fluid_particles[0][0][i] + fixed_vector_length * (fluid_particles[2][0][i] / np.sqrt(fluid_particles[2][0][i]**2 + fluid_particles[3][0][i]**2)), 
+                                fluid_particles[1][0][i] + fixed_vector_length * (fluid_particles[3][0][i] / np.sqrt(fluid_particles[2][0][i]**2 + fluid_particles[3][0][i]**2))), 
+                            xytext=(fluid_particles[0][0][i], fluid_particles[1][0][i]),
+                            arrowprops=dict(facecolor='black', edgecolor='black', width=0.5, headwidth=3),
+                            visible=False) for i in range(len(fluid_particles[0][0]))]
 
     colorbar = None
 
@@ -142,13 +145,6 @@ def visualize_flow(fluid_particles, delta_ts, diameter_particle, smoothing_lengt
         labels_visible = not labels_visible
         for label in fluid_labels:
             label.set_visible(labels_visible)
-        fig.canvas.draw_idle()
-
-    def toggle_circles(event):
-        nonlocal circles_visible
-        circles_visible = not circles_visible
-        for circle in smoothing_circles:
-            circle.set_visible(circles_visible)
         fig.canvas.draw_idle()
 
     def toggle_velocities(event):
@@ -227,7 +223,7 @@ def visualize_flow(fluid_particles, delta_ts, diameter_particle, smoothing_lengt
                 if speed > max_speed:
                     max_speed = speed
                     max_speed_info = (i, t+1)
-                if fluid_particles[5][t][i] > max_pressure:
+                if fluid_particles[5][t][i] < max_pressure:
                     max_pressure = fluid_particles[5][t][i]
                     max_pressure_info = (i, t+1)
                 if fluid_particles[4][t][i] > max_density:
@@ -277,14 +273,13 @@ def visualize_flow(fluid_particles, delta_ts, diameter_particle, smoothing_lengt
         # Aktualisieren der Geschwindigkeitsvektoren
         for velocity in velocities:
             velocity.remove()
-        velocities[:] = [ax.annotate('', xy=(fluid_particles[0][time_step][i] + velocities_vector_factor * fluid_particles[2][time_step][i], 
-                                            fluid_particles[1][time_step][i] + velocities_vector_factor * fluid_particles[3][time_step][i]), 
+
+        velocities[:] = [ax.annotate('', 
+                                    xy=(fluid_particles[0][time_step][i] + fixed_vector_length * (fluid_particles[2][time_step][i] / np.sqrt(fluid_particles[2][time_step][i]**2 + fluid_particles[3][time_step][i]**2)), 
+                                        fluid_particles[1][time_step][i] + fixed_vector_length * (fluid_particles[3][time_step][i] / np.sqrt(fluid_particles[2][time_step][i]**2 + fluid_particles[3][time_step][i]**2))), 
                                     xytext=(fluid_particles[0][time_step][i], fluid_particles[1][time_step][i]),
                                     arrowprops=dict(facecolor='black', edgecolor='black', width=0.5, headwidth=3),
                                     visible=velocities_visible, zorder=5) for i in range(len(fluid_particles[0][time_step]))]
-
-        current_time = sum(delta_ts[:time_step + 1])  # Zeit-Index bleibt gleich, weil delta_ts bei 0 beginnt
-        time_text.set_text(f'Time: {current_time:.3f} s')
 
         # Umwandlung der Geschwindigkeitskomponenten in NumPy-Arrays für die Berechnung der Geschwindigkeit
         speeds = np.sqrt(np.array(fluid_particles[2][time_step])**2 + np.array(fluid_particles[3][time_step])**2)
