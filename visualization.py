@@ -15,7 +15,7 @@ def visualize_boundary(ax, diameter_particle, box_width, box_height, fluid_width
     inlet_points = np.vstack([inlet_points_x.ravel(), inlet_points_y.ravel()]).T
 
     # Adding the random shift
-    random_shift = np.random.uniform(0, 0.1 * spacing, inlet_points.shape)
+    random_shift = np.random.uniform(0, 0.01 * spacing, inlet_points.shape)
     inlet_points += random_shift
 
     # Drawing the boundary as thick black lines
@@ -236,7 +236,7 @@ def visualize_flow(fluid_particles, delta_ts, diameter_particle, smoothing_lengt
 
     ax.text(-0.9, 1.02, 'Max Values', transform=ax.transAxes, fontsize=14, verticalalignment='top')
     ax.text(-0.9, 0.98, f'Max Speed: {max_speed:.6f} m/s (Particle {max_speed_info[0]}, Step {max_speed_info[1]})', transform=ax.transAxes, fontsize=12, verticalalignment='top')
-    ax.text(-0.9, 0.94, f'Max Pressure: {max_pressure:.6f} Pa (Particle {max_pressure_info[0]}, Step {max_pressure_info[1]})', transform=ax.transAxes, fontsize=12, verticalalignment='top')
+    ax.text(-0.9, 0.94, f'Min Pressure: {max_pressure:.6f} Pa (Particle {max_pressure_info[0]}, Step {max_pressure_info[1]})', transform=ax.transAxes, fontsize=12, verticalalignment='top')
     ax.text(-0.9, 0.90, f'Max Density: {max_density:.6f} kg/m^3 (Particle {max_density_info[0]}, Step {max_density_info[1]})', transform=ax.transAxes, fontsize=12, verticalalignment='top')
 
     ax.text(-0.9, 0.75, 'Particle Informations (click Particle)', transform=ax.transAxes, fontsize=14, verticalalignment='top')
@@ -297,7 +297,12 @@ def visualize_flow(fluid_particles, delta_ts, diameter_particle, smoothing_lengt
         if selected_particle is not None:
             update_particle_info(selected_particle, time_step)
 
+        # Aktualisieren der Zeit
+        current_time = sum(delta_ts[:time_step + 1])
+        time_text.set_text(f'Time: {current_time:.3f} s')
+
         fig.canvas.draw_idle()
+
 
     slider.on_changed(update)
 
@@ -315,7 +320,7 @@ def visualize_flow(fluid_particles, delta_ts, diameter_particle, smoothing_lengt
         scale_factor = min(x_scale, y_scale)
 
         # Berechnung der Markergröße in Punkten
-        marker_size = diameter_particle * scale_factor * 4.2
+        marker_size = diameter_particle * scale_factor * 10
         points.set_sizes([marker_size] * len(fluid_particles[0][0]))
         plt.draw()
 

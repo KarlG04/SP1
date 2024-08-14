@@ -22,8 +22,8 @@ def initialize_fluid(fluid_width, fluid_height, spacing):
     inlet_points = np.vstack([inlet_points_x.ravel(), inlet_points_y.ravel()]).T
 
     # Add a random offset to each point to introduce variability
-    # The offset is uniformly distributed within the range [0, 0.1 * spacing]
-    random_shift = np.random.uniform(0, 0.1 * spacing, inlet_points.shape)
+    # The offset is uniformly distributed within the range [0, 0.01 * spacing]
+    random_shift = np.random.uniform(0, 0.01 * spacing, inlet_points.shape)
     inlet_points += random_shift
     
     # Convert inlet_points into a list of tuples for easier handling
@@ -167,7 +167,7 @@ def calculate_viscous_force(mass_per_particle, dynamic_viscosity, distances, smo
 
     return viscous_forces
 
-def sum_up_forces(pressure_forces, viscous_forces, gravity):
+def sum_up_forces(pressure_forces, viscous_forces, gravity, densities):
     # Get the number of particles
     num_particles = len(pressure_forces)
     
@@ -179,6 +179,11 @@ def sum_up_forces(pressure_forces, viscous_forces, gravity):
         px, py = pressure_forces[i]  # Pressure force on particle i
         vx, vy = viscous_forces[i]   # Viscous force on particle i
         gx, gy = gravity             # Gravity force (assumed to be constant for all particles)
+        rho = densities[i]           # Density of particle i
+
+        # Multiply gravity by the density to get the gravitational force density
+        gx *= rho
+        gy *= rho
 
         # Sum the x and y components of the forces
         total_force_x = px + vx + gx
@@ -279,7 +284,7 @@ def run_simulation(gravity, rest_density, num_time_steps, spacing, smoothing_len
         viscous_forces = np.array(viscous_forces)  # Ensure it is a NumPy array
         resultant_viscous_forces = np.sqrt(viscous_forces[:, 0]**2 + viscous_forces[:, 1]**2)
         # Sum up gravitational, viscous, and pressure forces
-        total_forces = sum_up_forces(pressure_forces, viscous_forces, gravity)
+        total_forces = sum_up_forces(pressure_forces, viscous_forces, gravity, densities)
         # Integrate the acceleration to get the velocities and positions
         fluid_positions, fluid_velocities = integrate_acceleration(fluid_positions, fluid_velocities, densities, delta_t, total_forces)
         # Enforce that the fluid particles stay within the defined boundary
